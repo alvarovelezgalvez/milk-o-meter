@@ -75,7 +75,7 @@
         </div>
         
         <div class="mb-3">
-          <label class="form-label">Token de GitHub (solo visible una vez)</label>
+          <label class="form-label">Token de GitHub</label>
           <input type="password" id="githubToken" class="form-control" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" />
           <small class="text-muted">
             <a href="https://github.com/settings/tokens" target="_blank">Crear token aquí</a> (permisos: repo)
@@ -240,7 +240,7 @@ const APP_PASSWORD = 'ari';
 const CONFIG_KEY = 'milkometer_config_v1';
 const DATA_KEY = 'milkometer_local_data_v1';
 
-// Datos históricos (tus 30 tomas originales)
+// Datos históricos CORREGIDOS (sin errores de sintaxis)
 const DATOS_HISTORICOS = [
   {"id":1,"fecha":"2025-12-10","hora_inicio":"08:00","hora_fin":"08:30","estrellas":5,"lado":"Ambos","comentarios":"Primera toma buena","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
   {"id":2,"fecha":"2025-12-10","hora_inicio":"08:30","hora_fin":"09:00","estrellas":5,"lado":"Ambos","comentarios":"Segunda toma buena","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
@@ -254,10 +254,10 @@ const DATOS_HISTORICOS = [
   {"id":10,"fecha":"2025-12-11","hora_inicio":"10:30","hora_fin":"10:30","estrellas":2,"lado":"Ambos","comentarios":"No quiso comer","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
   {"id":11,"fecha":"2025-12-11","hora_inicio":"12:00","hora_fin":"12:30","estrellas":5,"lado":"Ambos","comentarios":"Media hora, estuvo en los dos pechos","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
   {"id":12,"fecha":"2025-12-11","hora_inicio":"13:55","hora_fin":"14:10","estrellas":5,"lado":"Izquierdo","comentarios":"Pecho izquierdo","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
-  {"id":13,"fecha":"2025-12-11","hora_inicio":"15:08","hora_fin":"15:40","estrellas":5,"lado":"Derecho","comentarios":"Pecho derecho","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":13,"fecha":"2025-12-11,"hora_inicio":"15:08","hora_fin":"15:40","estrellas":5,"lado":"Derecho","comentarios":"Pecho derecho","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
   {"id":14,"fecha":"2025-12-11","hora_inicio":"17:50","hora_fin":"18:00","estrellas":4,"lado":"Derecho","comentarios":"Pecho derecho","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
   {"id":15,"fecha":"2025-12-11","hora_inicio":"20:30","hora_fin":"21:00","estrellas":5,"lado":"Ambos","comentarios":"15' pecho izquierdo y 15' derecho, ahora ya es leche","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
-  {"id":16,"fecha":"2025-12-11,"hora_inicio":"21:52","hora_fin":"22:09","estrellas":5,"lado":"Izquierdo","comentarios":"Pecho izquierdo","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":16,"fecha":"2025-12-11","hora_inicio":"21:52","hora_fin":"22:09","estrellas":5,"lado":"Izquierdo","comentarios":"Pecho izquierdo","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
   {"id":17,"fecha":"2025-12-11","hora_inicio":"23:50","hora_fin":"00:25","estrellas":5,"lado":"Derecho","comentarios":"Teta derecha","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
   {"id":18,"fecha":"2025-12-12","hora_inicio":"01:15","hora_fin":"01:30","estrellas":5,"lado":"Izquierdo","comentarios":"Teta izquierda","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
   {"id":19,"fecha":"2025-12-12","hora_inicio":"03:35","hora_fin":"03:50","estrellas":4,"lado":"Derecho","comentarios":"No ha dormido entre medias, le suenan las tripas, no está comiendo mucho","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
@@ -314,12 +314,14 @@ function login() {
 function logout() {
   if (confirm('¿Seguro que quieres salir?')) {
     localStorage.removeItem('milkometer_auth');
-    clearInterval(syncInterval);
+    if (syncInterval) {
+      clearInterval(syncInterval);
+    }
     location.reload();
   }
 }
 
-async function initApp() {
+function initApp() {
   document.getElementById('loginView').classList.add('d-none');
   document.getElementById('appView').classList.remove('d-none');
   
@@ -327,7 +329,7 @@ async function initApp() {
   cargarConfig();
   
   // Cargar datos iniciales
-  await cargarDatos();
+  cargarDatos();
   
   // Iniciar sincronización automática cada 30 segundos
   syncInterval = setInterval(sincronizarConGitHub, 30000);
@@ -346,9 +348,9 @@ function cargarConfig() {
     }
   }
   
-  // Si no hay configuración, mostrar modal
+  // Si no hay configuración, mostrar modal después de un breve retraso
   if (!config || !config.githubUser || !config.githubToken) {
-    setTimeout(() => mostrarConfig(), 1000);
+    setTimeout(mostrarConfig, 500);
   }
 }
 
@@ -363,16 +365,19 @@ function guardarConfig() {
   }
   
   config = {
-    githubUser,
-    repoName,
-    githubToken,
+    githubUser: githubUser,
+    repoName: repoName,
+    githubToken: githubToken,
     configuredAt: new Date().toISOString()
   };
   
   localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
   
-  const modal = bootstrap.Modal.getInstance(document.getElementById('configModal'));
-  if (modal) modal.hide();
+  const modalElement = document.getElementById('configModal');
+  const modal = bootstrap.Modal.getInstance(modalElement);
+  if (modal) {
+    modal.hide();
+  }
   
   alert('✅ Configuración guardada. Ahora se sincronizará con GitHub.');
   
@@ -381,7 +386,8 @@ function guardarConfig() {
 }
 
 function mostrarConfig() {
-  const modal = new bootstrap.Modal(document.getElementById('configModal'));
+  const modalElement = document.getElementById('configModal');
+  const modal = new bootstrap.Modal(modalElement);
   
   if (config) {
     document.getElementById('githubUser').value = config.githubUser || '';
@@ -392,7 +398,7 @@ function mostrarConfig() {
   modal.show();
 }
 
-/************ GESTIÓN DE DATOS CON GITHUB ************/
+/************ GESTIÓN DE DATOS ************/
 async function cargarDatos() {
   // Primero intentar cargar desde GitHub
   let datosGitHub = [];
@@ -407,7 +413,6 @@ async function cargarDatos() {
       }
     } catch (error) {
       console.warn('No se pudo cargar desde GitHub:', error);
-      // Continuar con datos locales
     }
   }
   
@@ -427,7 +432,7 @@ async function cargarDatos() {
   
   // Si aún no hay datos, cargar históricos
   if (tomas.length === 0) {
-    tomas = [...DATOS_HISTORICOS];
+    tomas = JSON.parse(JSON.stringify(DATOS_HISTORICOS));
     console.log(`Cargadas ${tomas.length} tomas históricas`);
   }
   
@@ -438,6 +443,11 @@ async function cargarDatos() {
   renderizarTomas();
   actualizarResumen();
   actualizarInfo();
+}
+
+function guardarDatosLocales() {
+  localStorage.setItem(DATA_KEY, JSON.stringify(tomas));
+  console.log('Datos guardados localmente:', tomas.length);
 }
 
 async function guardarDatos() {
@@ -451,15 +461,11 @@ async function guardarDatos() {
       actualizarSyncStatus('success', 'Guardado en GitHub');
     } catch (error) {
       console.warn('No se pudo guardar en GitHub:', error);
-      actualizarSyncStatus('warning', 'Guardado localmente (sin conexión)');
+      actualizarSyncStatus('warning', 'Guardado localmente');
     }
   } else {
-    actualizarSyncStatus('warning', 'Guardado localmente (sin configuración GitHub)');
+    actualizarSyncStatus('warning', 'Guardado localmente');
   }
-}
-
-function guardarDatosLocales() {
-  localStorage.setItem(DATA_KEY, JSON.stringify(tomas));
 }
 
 async function sincronizarConGitHub() {
@@ -471,51 +477,63 @@ async function sincronizarConGitHub() {
     const datosRemotos = await obtenerDatosDeGitHub();
     
     if (datosRemotos.length === 0) {
-      // No hay datos remotos, subir los locales
-      await guardarDatosEnGitHub();
+      // No hay datos remotos, subir los locales si tenemos
+      if (tomas.length > 0) {
+        await guardarDatosEnGitHub();
+      }
     } else {
-      // Sincronizar: combinar datos locales y remotos
-      const idsLocales = new Set(tomas.map(t => t.id));
-      const idsRemotos = new Set(datosRemotos.map(t => t.id));
-      
-      // Añadir datos remotos que no tenemos localmente
-      datosRemotos.forEach(tomaRemota => {
-        if (!idsLocales.has(tomaRemota.id)) {
-          tomas.push(tomaRemota);
-        }
-      });
-      
-      // Actualizar datos locales que sean más recientes
-      tomas.forEach((tomaLocal, index) => {
-        const tomaRemota = datosRemotos.find(t => t.id === tomaLocal.id);
-        if (tomaRemota) {
-          const fechaLocal = new Date(tomaLocal.updated_at || tomaLocal.created_at);
-          const fechaRemota = new Date(tomaRemota.updated_at || tomaRemota.created_at);
-          
-          if (fechaRemota > fechaLocal) {
-            // El dato remoto es más reciente
-            tomas[index] = tomaRemota;
-          }
-        }
-      });
-      
-      // Ordenar por fecha
-      tomas.sort((a, b) => {
-        const fechaA = new Date(a.updated_at || a.created_at);
-        const fechaB = new Date(b.updated_at || b.created_at);
-        return fechaB - fechaA;
-      });
-      
-      // Guardar cambios
-      guardarDatosLocales();
-      renderizarTomas();
-      actualizarResumen();
+      // Sincronizar datos
+      await sincronizarDatos(datosRemotos);
     }
     
     actualizarSyncStatus('success', 'Sincronizado');
   } catch (error) {
     console.warn('Error sincronizando:', error);
-    actualizarSyncStatus('danger', 'Error de sincronización');
+    actualizarSyncStatus('danger', 'Error de conexión');
+  }
+}
+
+async function sincronizarDatos(datosRemotos) {
+  const idsLocales = new Set(tomas.map(t => t.id));
+  const idsRemotos = new Set(datosRemotos.map(t => t.id));
+  let cambios = false;
+  
+  // Añadir datos remotos que no tenemos localmente
+  datosRemotos.forEach(tomaRemota => {
+    if (!idsLocales.has(tomaRemota.id)) {
+      tomas.push(tomaRemota);
+      cambios = true;
+    }
+  });
+  
+  // Actualizar datos locales que sean más recientes
+  tomas.forEach((tomaLocal, index) => {
+    const tomaRemota = datosRemotos.find(t => t.id === tomaLocal.id);
+    if (tomaRemota) {
+      const fechaLocal = new Date(tomaLocal.updated_at || tomaLocal.created_at);
+      const fechaRemota = new Date(tomaRemota.updated_at || tomaRemota.created_at);
+      
+      if (fechaRemota > fechaLocal) {
+        // El dato remoto es más reciente
+        tomas[index] = tomaRemota;
+        cambios = true;
+      }
+    }
+  });
+  
+  if (cambios) {
+    // Ordenar por fecha
+    tomas.sort((a, b) => {
+      const fechaA = new Date(a.updated_at || a.created_at);
+      const fechaB = new Date(b.updated_at || b.created_at);
+      return fechaB - fechaA;
+    });
+    
+    // Guardar cambios
+    guardarDatosLocales();
+    renderizarTomas();
+    actualizarResumen();
+    actualizarInfo();
   }
 }
 
@@ -579,9 +597,13 @@ async function guardarDatosEnGitHub() {
     
     const body = {
       message: `Actualización tomas ${new Date().toLocaleString()}`,
-      content: contenidoCodificado,
-      sha: sha
+      content: contenidoCodificado
     };
+    
+    // Solo añadir SHA si existe
+    if (sha) {
+      body.sha = sha;
+    }
     
     const response = await fetch(url, {
       method: 'PUT',
@@ -594,7 +616,8 @@ async function guardarDatosEnGitHub() {
     });
     
     if (!response.ok) {
-      throw new Error(`GitHub API error: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`GitHub API error: ${response.status} - ${errorText}`);
     }
     
     return true;
@@ -630,9 +653,6 @@ function actualizarInfo() {
   document.getElementById('totalRegistros').textContent = 
     `${tomasHoy} tomas hoy | ${totalTomas} en total`;
 }
-
-// ... (las funciones de gestión de tomas, renderizado, etc. son las mismas que antes)
-// Solo necesito agregar las funciones básicas de UI aquí:
 
 function nuevaToma() {
   editId = null;
@@ -747,7 +767,9 @@ function editarToma(id) {
 }
 
 function eliminarToma(id) {
-  if (!confirm('¿Eliminar esta toma?')) return;
+  if (!confirm('¿Eliminar esta toma? Esta acción no se puede deshacer.')) {
+    return;
+  }
   
   tomas = tomas.filter(t => t.id !== id);
   guardarDatos();
@@ -808,7 +830,6 @@ function renderizarTomas() {
         `<span class="badge bg-warning text-dark ms-2"><i class="bi bi-star-fill"></i> ${toma.estrellas}</span>` : '';
       
       const duracion = calcularDuracion(toma.hora_inicio, toma.hora_fin);
-      const horaFin = toma.hora_fin || '<em class="text-muted">En curso...</em>';
       
       html += `
         <div class="list-group-item ${claseLado}">
@@ -817,7 +838,7 @@ function renderizarTomas() {
               <div class="d-flex align-items-center mb-1">
                 <span class="chip me-2">${iconoLado}</span>
                 <strong>${toma.hora_inicio}</strong>
-                ${toma.hora_fin ? `<span class="mx-1">→</span><strong>${toma.hora_fin}</strong>` : ''}
+                ${toma.hora_fin ? `<span class="mx-1">→</span><strong>${toma.hora_fin}</strong>` : '<span class="mx-1">→</span><em class="text-muted">En curso...</em>'}
                 ${duracion ? `<span class="badge bg-info ms-2">${duracion}</span>` : ''}
                 ${estrellasHTML}
               </div>
@@ -867,7 +888,7 @@ function actualizarResumen() {
   if (tomasHoy.length > 0) {
     const ultima = tomasHoy.reduce((latest, toma) => {
       return toma.hora_inicio > latest.hora_inicio ? toma : latest;
-    });
+    }, tomasHoy[0]);
     ultimaToma = ultima.hora_inicio;
   }
   
@@ -882,7 +903,8 @@ function calcularMinutos(inicio, fin) {
   try {
     const [h1, m1] = inicio.split(':').map(Number);
     const [h2, m2] = fin.split(':').map(Number);
-    return (h2 * 60 + m2) - (h1 * 60 + m1);
+    const minutos = (h2 * 60 + m2) - (h1 * 60 + m1);
+    return minutos > 0 ? minutos : 0;
   } catch (e) {
     return 0;
   }
@@ -909,10 +931,14 @@ function mostrarNotificacion(mensaje) {
     </div>
   `;
   document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3000);
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.parentNode.removeChild(toast);
+    }
+  }, 3000);
 }
 
-// Exponer funciones
+// Exponer funciones globalmente
 window.login = login;
 window.logout = logout;
 window.nuevaToma = nuevaToma;
