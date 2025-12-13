@@ -14,14 +14,17 @@
       --baby-purple:#efe7ff;
       --ink:#4a5568;
     }
-    body{background:linear-gradient(180deg,var(--baby-blue),var(--baby-mint)); color:var(--ink)}
-    .card{border-radius:1.25rem; box-shadow:0 10px 25px rgba(0,0,0,.06)}
+    body{background:linear-gradient(180deg,var(--baby-blue),var(--baby-mint)); color:var(--ink); min-height:100vh}
+    .card{border-radius:1.25rem; box-shadow:0 10px 25px rgba(0,0,0,.06); border:none}
     .btn-primary{background:#ff8fb3;border-color:#ff8fb3}
     .btn-primary:hover{background:#ff7aa5;border-color:#ff7aa5}
     .btn-success{background:#6bd1b3;border-color:#6bd1b3}
-    .chip{background:var(--baby-purple); border-radius:999px; padding:.25rem .6rem}
-    .stars span{cursor:pointer}
-    .list-group-item{border-radius:1rem; margin-bottom:.5rem}
+    .chip{background:var(--baby-purple); border-radius:999px; padding:.25rem .6rem; display:inline-block}
+    .stars span{cursor:pointer; user-select:none; font-size:2rem}
+    .list-group-item{border-radius:1rem; margin-bottom:.5rem; border:none; background:rgba(255,255,255,0.8)}
+    #loading{display:none}
+    .star-filled{color:#ffc107}
+    .star-empty{color:#ddd}
   </style>
 </head>
 <body>
@@ -30,7 +33,7 @@
 <div class="container py-4" id="loginView">
   <div class="card p-4">
     <h3 class="mb-2 text-center">milk-o-meter 🍼 - Ariadna 💕</h3>
-    <input type="password" id="password" class="form-control mb-3" placeholder="Contraseña" />
+    <input type="password" id="password" class="form-control mb-3" placeholder="Contraseña" autocomplete="off" />
     <button class="btn btn-primary w-100" onclick="login()">Entrar 👶</button>
   </div>
 </div>
@@ -43,9 +46,13 @@
   </div>
 
   <div class="mb-3">
-    <button class="btn btn-success w-100" onclick="nuevaToma()">+ Nueva toma 🤱</button>
-    <div class="card mt-3">
-      <div class="card-body" id="resumen"></div>
+    <button class="btn btn-success w-100 mb-2" onclick="nuevaToma()">+ Nueva toma 🤱</button>
+    <div class="alert alert-info d-none" id="loading">
+      <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+      Cargando...
+    </div>
+    <div class="card">
+      <div class="card-body" id="resumen">Cargando resumen...</div>
     </div>
   </div>
 
@@ -53,7 +60,7 @@
     <div class="card-body">
       <div class="mb-2">
         <label>Hora inicio ⏱️</label>
-        <input type="time" id="inicio" class="form-control" />
+        <input type="time" id="inicio" class="form-control" required />
       </div>
       <div class="mb-2">
         <label>Hora fin ⏰</label>
@@ -61,13 +68,14 @@
       </div>
       <div class="mb-2">
         <label>Cantidad ⭐</label>
-        <div id="estrellas" class="fs-3 stars">
+        <div id="estrellas" class="stars">
           <span onclick="setStars(1)">☆</span>
           <span onclick="setStars(2)">☆</span>
           <span onclick="setStars(3)">☆</span>
           <span onclick="setStars(4)">☆</span>
           <span onclick="setStars(5)">☆</span>
         </div>
+        <small class="text-muted">Click en las estrellas para valorar</small>
       </div>
       <div class="mb-2">
         <label>Pecho 🫶</label>
@@ -79,16 +87,20 @@
       </div>
       <div class="mb-2">
         <label>Comentarios 💬</label>
-        <textarea id="comentarios" class="form-control"></textarea>
+        <textarea id="comentarios" class="form-control" rows="2"></textarea>
       </div>
       <div class="d-grid gap-2">
-        <button class="btn btn-primary" onclick="guardarToma()">Guardar 💾</button>
+        <button class="btn btn-primary" onclick="guardarToma()" id="btnGuardar">Guardar 💾</button>
         <button class="btn btn-outline-secondary" onclick="cerrarAhora()">Cerrar toma ahora ⏱️</button>
+        <button class="btn btn-outline-danger" onclick="cancelarToma()">Cancelar</button>
       </div>
     </div>
   </div>
 
-  <ul class="list-group" id="lista"></ul>
+  <h5 class="mt-4 mb-3">Historial de tomas 📋</h5>
+  <ul class="list-group" id="lista">
+    <li class="list-group-item text-center">Cargando...</li>
+  </ul>
 </div>
 
 <script>
@@ -97,72 +109,109 @@ const APP_PASSWORD = 'ari';
 const SUPABASE_URL = 'https://kkrwueybekmyciktmjit.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtrcnd1ZXliZWtteWNpa3Rtaml0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5Mjg0MDIsImV4cCI6MjA1ODUwNDQwMn0.qMqex-e7_PuY4dGElNZ85ptV0fFbff4nmj-08FxtYpY';
 
-// Inicializar supabase correctamente
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Inicializar Supabase
+let supabase;
+try {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  console.log('Supabase inicializado correctamente');
+} catch (error) {
+  console.error('Error inicializando Supabase:', error);
+  alert('Error inicializando la base de datos. Recarga la página.');
+}
 
 let editId = null;
-let estrellasValor = null;
+let estrellasValor = 0;
+
+/************ UTILIDADES ************/
+function showLoading(show) {
+  document.getElementById('loading').classList.toggle('d-none', !show);
+}
+
+function getElement(id) {
+  return document.getElementById(id);
+}
 
 /************ LOGIN ************/
-window.login = function() {
-  const password = document.getElementById('password');
-  if(password.value === APP_PASSWORD){
-    localStorage.setItem('auth','1');
+function login() {
+  const password = getElement('password');
+  if (password.value === APP_PASSWORD) {
+    localStorage.setItem('auth', '1');
     init();
   } else {
     alert('Ups, contraseña incorrecta');
+    password.focus();
+    password.select();
   }
-};
+}
 
-window.logout = function() {
-  localStorage.removeItem('auth');
-  location.reload();
-};
+function logout() {
+  if (confirm('¿Seguro que quieres salir?')) {
+    localStorage.removeItem('auth');
+    location.reload();
+  }
+}
 
 function init() {
-  document.getElementById('loginView').classList.add('d-none');
-  document.getElementById('appView').classList.remove('d-none');
+  getElement('loginView').classList.add('d-none');
+  getElement('appView').classList.remove('d-none');
   cargarTomas();
 }
 
 /************ TOMAS ************/
-window.nuevaToma = function() {
+function nuevaToma() {
   editId = null;
-  document.getElementById('formToma').classList.remove('d-none');
+  getElement('formToma').classList.remove('d-none');
   const now = new Date();
-  const h = String(now.getHours()).padStart(2,'0');
-  const m = String(now.getMinutes()).padStart(2,'0');
-  document.getElementById('inicio').value = `${h}:${m}`;
-  document.getElementById('fin').value = '';
-  document.getElementById('comentarios').value = '';
-  estrellasValor = null; 
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  getElement('inicio').value = `${h}:${m}`;
+  getElement('fin').value = '';
+  getElement('comentarios').value = '';
+  estrellasValor = 0;
   setStars(0);
-  document.getElementById('lado').value = 'Izquierdo';
-};
+  getElement('lado').value = 'Izquierdo';
+  getElement('btnGuardar').textContent = 'Guardar 💾';
+  getElement('btnGuardar').disabled = false;
+}
 
-window.cerrarAhora = function() {
+function cancelarToma() {
+  getElement('formToma').classList.add('d-none');
+}
+
+function cerrarAhora() {
   const now = new Date();
-  const h = String(now.getHours()).padStart(2,'0');
-  const m = String(now.getMinutes()).padStart(2,'0');
-  document.getElementById('fin').value = `${h}:${m}`;
-};
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  getElement('fin').value = `${h}:${m}`;
+}
 
-window.setStars = function(n) {
-  estrellasValor = n || null;
+function setStars(n) {
+  estrellasValor = n;
   const stars = document.querySelectorAll('#estrellas span');
-  stars.forEach((s,i) => {
-    s.textContent = i < (n || 0) ? '★' : '☆';
+  stars.forEach((star, index) => {
+    if (index < n) {
+      star.textContent = '★';
+      star.className = 'star-filled';
+    } else {
+      star.textContent = '☆';
+      star.className = 'star-empty';
+    }
   });
-};
+}
 
-window.guardarToma = async function() {
-  const inicio = document.getElementById('inicio').value;
-  const fin = document.getElementById('fin').value;
-  const lado = document.getElementById('lado').value;
-  const comentarios = document.getElementById('comentarios').value;
+async function guardarToma() {
+  const inicio = getElement('inicio').value;
+  const fin = getElement('fin').value;
+  const lado = getElement('lado').value;
+  const comentarios = getElement('comentarios').value;
+  
+  if (!inicio) {
+    alert('Por favor, ingresa la hora de inicio');
+    return;
+  }
   
   const data = {
-    fecha: new Date().toISOString().substring(0,10),
+    fecha: new Date().toISOString().split('T')[0],
     hora_inicio: inicio,
     hora_fin: fin || null,
     estrellas: estrellasValor,
@@ -171,105 +220,207 @@ window.guardarToma = async function() {
     created_at: new Date().toISOString()
   };
   
+  const btn = getElement('btnGuardar');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
+  
   try {
-    if(editId) {
-      const { error } = await supabaseClient
+    if (!supabase) {
+      throw new Error('No se pudo conectar a la base de datos');
+    }
+    
+    let result;
+    if (editId) {
+      result = await supabase
         .from('mkm_toma')
         .update(data)
         .eq('id', editId);
-      
-      if(error) throw error;
     } else {
-      const { error } = await supabaseClient
+      result = await supabase
         .from('mkm_toma')
         .insert([data]);
-      
-      if(error) throw error;
     }
     
-    document.getElementById('formToma').classList.add('d-none');
-    cargarTomas();
-  } catch(error) {
-    console.error('Error guardando toma:', error);
-    alert('Error al guardar la toma: ' + error.message);
+    if (result.error) {
+      throw result.error;
+    }
+    
+    getElement('formToma').classList.add('d-none');
+    await cargarTomas();
+    
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Error: ' + error.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
   }
-};
+}
 
 async function cargarTomas() {
+  showLoading(true);
+  
   try {
-    const { data, error } = await supabaseClient
+    if (!supabase) {
+      throw new Error('No se pudo conectar a la base de datos');
+    }
+    
+    const { data, error } = await supabase
       .from('mkm_toma')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(50);
     
-    if(error) throw error;
-    
-    const lista = document.getElementById('lista');
-    const resumen = document.getElementById('resumen');
-    
-    lista.innerHTML = '';
-    let totalMin = 0;
-    const hoy = new Date().toISOString().substring(0,10);
-    
-    if(data) {
-      data.forEach(t => {
-        if(t.hora_inicio && t.hora_fin && t.fecha === hoy){
-          try {
-            const ini = new Date(`${t.fecha}T${t.hora_inicio}`);
-            const finDate = new Date(`${t.fecha}T${t.hora_fin}`);
-            totalMin += (finDate - ini) / 60000;
-          } catch(e) {
-            console.error('Error calculando tiempo:', e);
-          }
-        }
-        
-        const li = document.createElement('li');
-        li.className = 'list-group-item';
-        li.innerHTML = `
-          <div class='d-flex justify-content-between'>
-            <div>
-              <strong>${t.fecha}</strong> ${t.hora_inicio} - ${t.hora_fin || '…'}<br>
-              <span class='chip'>${t.lado}</span> ${t.estrellas ? `⭐${t.estrellas}` : ''}
-            </div>
-            <div>🍼</div>
-          </div>
-          ${t.comentarios ? '<div class="mt-1">💬 ' + t.comentarios + '</div>' : ''}
-        `;
-        li.onclick = () => editar(t);
-        lista.appendChild(li);
-      });
-      
-      const tomasHoy = data.filter(t => t.fecha === hoy).length;
-      const h = Math.floor(totalMin / 60);
-      const m = Math.round(totalMin % 60);
-      
-      resumen.innerHTML = `
-        <strong>Resumen de hoy 👶</strong><br>
-        🤱 Tomas: ${tomasHoy}<br>
-        ⏱️ Tiempo total: ${h}h ${m}min
-      `;
+    if (error) {
+      throw error;
     }
-  } catch(error) {
+    
+    const lista = getElement('lista');
+    const resumen = getElement('resumen');
+    
+    // Mostrar historial
+    lista.innerHTML = '';
+    
+    if (!data || data.length === 0) {
+      lista.innerHTML = '<li class="list-group-item text-center">No hay tomas registradas todavía</li>';
+      resumen.innerHTML = '<strong>Resumen de hoy 👶</strong><br>🤱 Tomas: 0<br>⏱️ Tiempo total: 0h 0min';
+      return;
+    }
+    
+    data.forEach(t => {
+      const li = document.createElement('li');
+      li.className = 'list-group-item';
+      
+      // Formatear fecha
+      const fecha = t.fecha || 'Sin fecha';
+      const horaInicio = t.hora_inicio || '--:--';
+      const horaFin = t.hora_fin || 'En curso...';
+      const estrellas = t.estrellas ? '★'.repeat(t.estrellas) + '☆'.repeat(5 - t.estrellas) : '';
+      
+      li.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start">
+          <div style="flex: 1;">
+            <strong>${fecha}</strong><br>
+            <small>${horaInicio} - ${horaFin}</small><br>
+            <span class="chip me-2">${t.lado || 'No especificado'}</span>
+            ${estrellas ? `<span class="text-warning">${estrellas}</span>` : ''}
+            ${t.comentarios ? '<div class="mt-2"><small>💬 ' + t.comentarios + '</small></div>' : ''}
+          </div>
+          <div>
+            <button class="btn btn-sm btn-outline-primary" onclick="editarToma(${t.id})">
+              Editar
+            </button>
+          </div>
+        </div>
+      `;
+      
+      // Asignar datos al elemento para acceso fácil
+      li.dataset.tomaId = t.id;
+      lista.appendChild(li);
+    });
+    
+    // Calcular resumen del día
+    const hoy = new Date().toISOString().split('T')[0];
+    const tomasHoy = data.filter(t => t.fecha === hoy);
+    let totalMinutos = 0;
+    
+    tomasHoy.forEach(t => {
+      if (t.hora_inicio && t.hora_fin) {
+        try {
+          const [h1, m1] = t.hora_inicio.split(':').map(Number);
+          const [h2, m2] = t.hora_fin.split(':').map(Number);
+          const minutos = (h2 * 60 + m2) - (h1 * 60 + m1);
+          if (minutos > 0) {
+            totalMinutos += minutos;
+          }
+        } catch (e) {
+          console.warn('Error calculando tiempo para toma:', t.id, e);
+        }
+      }
+    });
+    
+    const horas = Math.floor(totalMinutos / 60);
+    const minutos = totalMinutos % 60;
+    
+    resumen.innerHTML = `
+      <strong>Resumen de hoy 👶</strong><br>
+      🤱 Tomas: ${tomasHoy.length}<br>
+      ⏱️ Tiempo total: ${horas}h ${minutos}min<br>
+      <small class="text-muted">Última actualización: ${new Date().toLocaleTimeString()}</small>
+    `;
+    
+  } catch (error) {
     console.error('Error cargando tomas:', error);
-    document.getElementById('resumen').innerHTML = 'Error al cargar las tomas';
+    getElement('lista').innerHTML = '<li class="list-group-item text-center text-danger">Error al cargar las tomas. Recarga la página.</li>';
+    getElement('resumen').innerHTML = '<div class="alert alert-danger">⚠️ Error conectando con la base de datos. Verifica tu conexión.</div>';
+  } finally {
+    showLoading(false);
   }
 }
 
-window.editar = function(t) {
-  editId = t.id;
-  document.getElementById('formToma').classList.remove('d-none');
-  document.getElementById('inicio').value = t.hora_inicio;
-  document.getElementById('fin').value = t.hora_fin || '';
-  estrellasValor = t.estrellas;
-  setStars(estrellasValor || 0);
-  document.getElementById('lado').value = t.lado;
-  document.getElementById('comentarios').value = t.comentarios || '';
-};
-
-// AUTOLOGIN
-if(localStorage.getItem('auth')) {
-  init();
+async function editarToma(id) {
+  try {
+    const { data, error } = await supabase
+      .from('mkm_toma')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) throw error;
+    if (!data) {
+      alert('No se encontró la toma');
+      return;
+    }
+    
+    editId = id;
+    getElement('formToma').classList.remove('d-none');
+    getElement('inicio').value = data.hora_inicio || '';
+    getElement('fin').value = data.hora_fin || '';
+    setStars(data.estrellas || 0);
+    getElement('lado').value = data.lado || 'Izquierdo';
+    getElement('comentarios').value = data.comentarios || '';
+    getElement('btnGuardar').textContent = 'Actualizar ✓';
+    
+    // Scroll al formulario
+    getElement('formToma').scrollIntoView({ behavior: 'smooth' });
+    
+  } catch (error) {
+    console.error('Error cargando toma para editar:', error);
+    alert('Error al cargar la toma para editar: ' + error.message);
+  }
 }
+
+/************ INICIALIZACIÓN ************/
+document.addEventListener('DOMContentLoaded', function() {
+  // Auto-focus en el campo de contraseña
+  const passwordField = getElement('password');
+  if (passwordField) {
+    passwordField.focus();
+    
+    // Permitir Enter para login
+    passwordField.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        login();
+      }
+    });
+  }
+  
+  // Verificar autenticación
+  if (localStorage.getItem('auth')) {
+    init();
+  }
+  
+  // Exponer funciones al ámbito global
+  window.login = login;
+  window.logout = logout;
+  window.nuevaToma = nuevaToma;
+  window.cancelarToma = cancelarToma;
+  window.cerrarAhora = cerrarAhora;
+  window.setStars = setStars;
+  window.guardarToma = guardarToma;
+  window.editarToma = editarToma;
+});
 </script>
 </body>
 </html>
