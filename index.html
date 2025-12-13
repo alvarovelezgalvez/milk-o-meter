@@ -424,7 +424,15 @@ function renderizarTomas(){
   if(tomas.length===0){
     lista.innerHTML='<div class="text-center py-4 text-muted">Sin tomas registradas</div>'; return;
   }
-  tomas.forEach(t=>{
+
+  // Ordenar por fecha + hora_fin descendente
+  const tomasOrdenadas = [...tomas].sort((a,b)=>{
+    const fechaHoraA = new Date(`${a.fecha}T${a.hora_fin||a.hora_inicio}`);
+    const fechaHoraB = new Date(`${b.fecha}T${b.hora_fin||b.hora_inicio}`);
+    return fechaHoraB - fechaHoraA;
+  });
+
+  tomasOrdenadas.forEach(t=>{
     const item=document.createElement('div');
     item.className='list-group-item '+(t.lado==='Izquierdo'?'toma-izquierda':t.lado==='Derecho'?'toma-derecha':'toma-ambos');
     item.innerHTML=`
@@ -443,6 +451,26 @@ function renderizarTomas(){
     lista.appendChild(item);
   });
 }
+
+function actualizarResumen(){
+  const hoy=new Date().toISOString().split('T')[0];
+  const tomasHoy = tomas
+    .filter(t => t.fecha === hoy)
+    .sort((a,b)=>{
+      const fechaHoraA = new Date(`${a.fecha}T${a.hora_fin||a.hora_inicio}`);
+      const fechaHoraB = new Date(`${b.fecha}T${b.hora_fin||b.hora_inicio}`);
+      return fechaHoraB - fechaHoraA;
+    });
+
+  let totalMin=0;
+  tomasHoy.forEach(t=>{if(t.hora_inicio&&t.hora_fin) totalMin+=calcularMinutos(t.hora_inicio,t.hora_fin);});
+  const horas=Math.floor(totalMin/60); const minutos=totalMin%60;
+  const ultima=tomasHoy.length>0?tomasHoy[0].hora_fin||tomasHoy[0].hora_inicio:'--:--';
+  document.getElementById('totalTomas').textContent=tomasHoy.length;
+  document.getElementById('tiempoTotal').textContent=`${horas}h ${minutos}m`;
+  document.getElementById('ultimaToma').textContent=ultima;
+}
+
 
 function editarToma(id){
   const t=tomas.find(x=>x.id===id); if(!t)return;
@@ -466,18 +494,6 @@ function calcularMinutos(inicio,fin){
   if(!inicio||!fin)return 0;
   const [h1,m1]=inicio.split(':').map(Number); const [h2,m2]=fin.split(':').map(Number);
   return (h2*60+m2)-(h1*60+m1);
-}
-
-function actualizarResumen(){
-  const hoy=new Date().toISOString().split('T')[0];
-  const tomasHoy=tomas.filter(t=>t.fecha===hoy);
-  let totalMin=0;
-  tomasHoy.forEach(t=>{if(t.hora_inicio&&t.hora_fin) totalMin+=calcularMinutos(t.hora_inicio,t.hora_fin);});
-  const horas=Math.floor(totalMin/60); const minutos=totalMin%60;
-  const ultima=tomasHoy.length>0?tomasHoy[0].hora_fin||tomasHoy[0].hora_inicio:'--:--';
-  document.getElementById('totalTomas').textContent=tomasHoy.length;
-  document.getElementById('tiempoTotal').textContent=`${horas}h ${minutos}m`;
-  document.getElementById('ultimaToma').textContent=ultima;
 }
 
 /************ SINCRONIZACIÓN GITHUB ************/
