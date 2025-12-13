@@ -28,7 +28,7 @@
     .toma-izquierda{border-left:4px solid #ff8fb3}
     .toma-derecha{border-left:4px solid #6bd1b3}
     .toma-ambos{border-left:4px solid #9d7aff}
-    .sync-status{font-size:0.8em; opacity:0.8}
+    .connection-badge{font-size:0.75em}
   </style>
 </head>
 <body>
@@ -41,12 +41,64 @@
       <h3 class="mb-2">milk-o-meter</h3>
       <p class="text-muted">Seguimiento de tomas de Ariadna 💕</p>
     </div>
-    <input type="password" id="password" class="form-control mb-3" placeholder="Contraseña familiar" autocomplete="off" />
+    <input type="password" id="password" class="form-control mb-3" placeholder="Contraseña" autocomplete="off" />
     <button class="btn btn-primary w-100" onclick="login()">
       <i class="bi bi-door-open"></i> Entrar
     </button>
     <div class="mt-3 text-center">
-      <small class="text-muted">Tu información se guarda de forma privada</small>
+      <small class="text-muted">Contraseña: ari</small>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIG MODAL -->
+<div class="modal fade" id="configModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-gear"></i> Configuración</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info">
+          <small><i class="bi bi-info-circle"></i> Configura estos datos una sola vez para sincronizar entre dispositivos</small>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">Tu usuario de GitHub</label>
+          <input type="text" id="githubUser" class="form-control" placeholder="ej: tuusuario" />
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">Nombre del repositorio</label>
+          <input type="text" id="repoName" class="form-control" placeholder="ej: milk-o-meter" value="milk-o-meter" />
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">Token de GitHub (solo visible una vez)</label>
+          <input type="password" id="githubToken" class="form-control" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" />
+          <small class="text-muted">
+            <a href="https://github.com/settings/tokens" target="_blank">Crear token aquí</a> (permisos: repo)
+          </small>
+        </div>
+        
+        <div class="alert alert-warning">
+          <small><i class="bi bi-exclamation-triangle"></i> <strong>Instrucciones:</strong>
+          <ol class="mb-0">
+            <li>Crea repositorio en GitHub (público o privado)</li>
+            <li>Crea token en GitHub con permisos "repo"</li>
+            <li>Introduce los datos aquí</li>
+            <li>¡Listo! Los datos se sincronizarán automáticamente</li>
+          </ol>
+          </small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarConfig()">
+          <i class="bi bi-save"></i> Guardar configuración
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -57,11 +109,14 @@
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
       <h3 class="mb-0">milk-o-meter 🍼</h3>
-      <small class="sync-status" id="syncStatus">Última sincronización: --:--</small>
+      <div class="connection-badge">
+        <span class="badge" id="syncStatus">● Desconectado</span>
+        <small class="text-muted ms-2" id="lastSync">--:--</small>
+      </div>
     </div>
     <div>
-      <button class="btn btn-outline-secondary btn-sm me-2" onclick="sincronizar()" id="btnSync">
-        <i class="bi bi-cloud-arrow-up"></i>
+      <button class="btn btn-outline-info btn-sm me-2" onclick="mostrarConfig()">
+        <i class="bi bi-gear"></i>
       </button>
       <button class="btn btn-outline-secondary btn-sm" onclick="logout()">
         <i class="bi bi-box-arrow-right"></i>
@@ -88,6 +143,9 @@
           <div class="display-6" id="ultimaToma">--:--</div>
           <small class="text-muted">Última</small>
         </div>
+      </div>
+      <div class="mt-2 text-center">
+        <small class="text-muted" id="totalRegistros">Cargando...</small>
       </div>
     </div>
   </div>
@@ -137,9 +195,9 @@
       <div class="mb-3">
         <label class="form-label"><i class="bi bi-symmetry-vertical"></i> Pecho</label>
         <select id="lado" class="form-select">
-          <option value="izquierda">👈 Izquierdo</option>
-          <option value="derecha">👉 Derecho</option>
-          <option value="ambos">🤲 Ambos</option>
+          <option value="Izquierdo">👈 Izquierdo</option>
+          <option value="Derecho">👉 Derecho</option>
+          <option value="Ambos">🤲 Ambos</option>
         </select>
       </div>
       
@@ -175,45 +233,53 @@
   </div>
 </div>
 
-<!-- Export/Import Modal -->
-<div class="modal fade" id="backupModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Respaldo de datos</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <p>Guarda este código para restaurar tus datos en otro dispositivo:</p>
-        <textarea id="backupData" class="form-control mb-3" rows="6" readonly></textarea>
-        <p>Para restaurar, pega el código aquí:</p>
-        <textarea id="restoreData" class="form-control mb-3" rows="6" placeholder="Pega el código de respaldo aquí..."></textarea>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-        <button type="button" class="btn btn-success" onclick="exportarDatos()">
-          <i class="bi bi-download"></i> Exportar
-        </button>
-        <button type="button" class="btn btn-primary" onclick="importarDatos()">
-          <i class="bi bi-upload"></i> Importar
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 /************ CONFIGURACIÓN ************/
 const APP_PASSWORD = 'ari';
-const STORAGE_KEY = 'milkometer_tomas_v2';
-const SYNC_INTERVAL = 30000; // 30 segundos
+const CONFIG_KEY = 'milkometer_config_v1';
+const DATA_KEY = 'milkometer_local_data_v1';
+
+// Datos históricos (tus 30 tomas originales)
+const DATOS_HISTORICOS = [
+  {"id":1,"fecha":"2025-12-10","hora_inicio":"08:00","hora_fin":"08:30","estrellas":5,"lado":"Ambos","comentarios":"Primera toma buena","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":2,"fecha":"2025-12-10","hora_inicio":"08:30","hora_fin":"09:00","estrellas":5,"lado":"Ambos","comentarios":"Segunda toma buena","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":3,"fecha":"2025-12-10","hora_inicio":"12:00","hora_fin":"12:15","estrellas":4,"lado":"Ambos","comentarios":"Toma ofrecida, parada por sueño","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":4,"fecha":"2025-12-10","hora_inicio":"14:00","hora_fin":"14:15","estrellas":4,"lado":"Ambos","comentarios":"Toma ofrecida, parada por sueño","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":5,"fecha":"2025-12-10","hora_inicio":"15:32","hora_fin":"15:57","estrellas":4,"lado":"Derecho","comentarios":"Se queda dormida pero apura teta derecha","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":6,"fecha":"2025-12-10","hora_inicio":"18:30","hora_fin":"19:02","estrellas":5,"lado":"Izquierdo","comentarios":"Se acaba durmiendo","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":7,"fecha":"2025-12-10","hora_inicio":"19:52","hora_fin":"20:18","estrellas":5,"lado":"Derecho","comentarios":"Con prueba del talón y vacuna de por medio","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":8,"fecha":"2025-12-11","hora_inicio":"01:18","hora_fin":"01:33","estrellas":5,"lado":"Derecho","comentarios":"10-15 minutos","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":9,"fecha":"2025-12-11","hora_inicio":"04:44","hora_fin":"05:45","estrellas":5,"lado":"Izquierdo","comentarios":"Muy bien esta toma","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":10,"fecha":"2025-12-11","hora_inicio":"10:30","hora_fin":"10:30","estrellas":2,"lado":"Ambos","comentarios":"No quiso comer","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":11,"fecha":"2025-12-11","hora_inicio":"12:00","hora_fin":"12:30","estrellas":5,"lado":"Ambos","comentarios":"Media hora, estuvo en los dos pechos","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":12,"fecha":"2025-12-11","hora_inicio":"13:55","hora_fin":"14:10","estrellas":5,"lado":"Izquierdo","comentarios":"Pecho izquierdo","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":13,"fecha":"2025-12-11","hora_inicio":"15:08","hora_fin":"15:40","estrellas":5,"lado":"Derecho","comentarios":"Pecho derecho","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":14,"fecha":"2025-12-11","hora_inicio":"17:50","hora_fin":"18:00","estrellas":4,"lado":"Derecho","comentarios":"Pecho derecho","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":15,"fecha":"2025-12-11","hora_inicio":"20:30","hora_fin":"21:00","estrellas":5,"lado":"Ambos","comentarios":"15' pecho izquierdo y 15' derecho, ahora ya es leche","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":16,"fecha":"2025-12-11,"hora_inicio":"21:52","hora_fin":"22:09","estrellas":5,"lado":"Izquierdo","comentarios":"Pecho izquierdo","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":17,"fecha":"2025-12-11","hora_inicio":"23:50","hora_fin":"00:25","estrellas":5,"lado":"Derecho","comentarios":"Teta derecha","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":18,"fecha":"2025-12-12","hora_inicio":"01:15","hora_fin":"01:30","estrellas":5,"lado":"Izquierdo","comentarios":"Teta izquierda","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":19,"fecha":"2025-12-12","hora_inicio":"03:35","hora_fin":"03:50","estrellas":4,"lado":"Derecho","comentarios":"No ha dormido entre medias, le suenan las tripas, no está comiendo mucho","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":20,"fecha":"2025-12-12","hora_inicio":"10:00","hora_fin":"10:28","estrellas":5,"lado":"Derecho","comentarios":"Teta derecha","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":21,"fecha":"2025-12-12","hora_inicio":"11:07","hora_fin":"11:25","estrellas":5,"lado":"Izquierdo","comentarios":"Dejando algunas gotas primero","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":22,"fecha":"2025-12-12","hora_inicio":"12:34","hora_fin":"12:55","estrellas":5,"lado":"Derecho","comentarios":"Todo bien","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":23,"fecha":"2025-12-12","hora_inicio":"14:22","hora_fin":"14:38","estrellas":4,"lado":"Izquierdo","comentarios":null,"created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":24,"fecha":"2025-12-12","hora_inicio":"17:38","hora_fin":"18:14","estrellas":5,"lado":"Derecho","comentarios":null,"created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":25,"fecha":"2025-12-12","hora_inicio":"19:14","hora_fin":"19:30","estrellas":4,"lado":"Izquierdo","comentarios":"No a tope pero bien","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":26,"fecha":"2025-12-12","hora_inicio":"21:14","hora_fin":"21:50","estrellas":5,"lado":"Derecho","comentarios":"Muy bien","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":27,"fecha":"2025-12-12","hora_inicio":"23:35","hora_fin":"00:00","estrellas":4,"lado":"Izquierdo","comentarios":"Se queda dormida, extra mimo","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":28,"fecha":"2025-12-13","hora_inicio":"01:41","hora_fin":"01:56","estrellas":4,"lado":"Derecho","comentarios":"+14 ducha, medio dormida","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":29,"fecha":"2025-12-13","hora_inicio":"03:30","hora_fin":"03:45","estrellas":5,"lado":"Ambos","comentarios":"Izda mimo + derecha 15 min, extra","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"},
+  {"id":30,"fecha":"2025-12-13","hora_inicio":"04:05","hora_fin":"04:22","estrellas":4,"lado":"Izquierdo","comentarios":"Medio","created_at":"2025-12-13T17:29:16.372Z","updated_at":"2025-12-13T17:29:16.372Z"}
+];
 
 /************ VARIABLES GLOBALES ************/
 let tomas = [];
 let editId = null;
-let estrellasValor = 0;
-let syncTimer = null;
+let estrellasValor = 3;
+let config = null;
+let syncInterval = null;
 
 /************ INICIALIZACIÓN ************/
 document.addEventListener('DOMContentLoaded', function() {
@@ -239,7 +305,7 @@ function login() {
     localStorage.setItem('milkometer_auth', 'true');
     initApp();
   } else {
-    alert('Contraseña incorrecta. Pista: son las iniciales de tu bebé 😉');
+    alert('Contraseña incorrecta');
     document.getElementById('password').focus();
     document.getElementById('password').select();
   }
@@ -248,98 +314,326 @@ function login() {
 function logout() {
   if (confirm('¿Seguro que quieres salir?')) {
     localStorage.removeItem('milkometer_auth');
+    clearInterval(syncInterval);
     location.reload();
   }
 }
 
-function initApp() {
+async function initApp() {
   document.getElementById('loginView').classList.add('d-none');
   document.getElementById('appView').classList.remove('d-none');
   
-  // Cargar datos
-  cargarDatos();
+  // Cargar configuración
+  cargarConfig();
   
-  // Iniciar sincronización automática
-  syncTimer = setInterval(sincronizar, SYNC_INTERVAL);
+  // Cargar datos iniciales
+  await cargarDatos();
   
-  // Actualizar estado de sincronización
-  actualizarSyncStatus();
+  // Iniciar sincronización automática cada 30 segundos
+  syncInterval = setInterval(sincronizarConGitHub, 30000);
 }
 
-/************ GESTIÓN DE DATOS ************/
-function cargarDatos() {
-  // Intentar cargar desde localStorage
-  const datosGuardados = localStorage.getItem(STORAGE_KEY);
-  if (datosGuardados) {
+/************ CONFIGURACIÓN GITHUB ************/
+function cargarConfig() {
+  const configGuardada = localStorage.getItem(CONFIG_KEY);
+  if (configGuardada) {
     try {
-      tomas = JSON.parse(datosGuardados);
-      console.log(`Cargadas ${tomas.length} tomas desde localStorage`);
+      config = JSON.parse(configGuardada);
+      console.log('Configuración cargada:', config);
     } catch (e) {
-      console.error('Error cargando datos:', e);
-      tomas = [];
+      console.error('Error cargando configuración:', e);
+      config = null;
     }
   }
   
-  // Intentar cargar desde URL (para compartir datos)
-  cargarDesdeURL();
+  // Si no hay configuración, mostrar modal
+  if (!config || !config.githubUser || !config.githubToken) {
+    setTimeout(() => mostrarConfig(), 1000);
+  }
+}
+
+function guardarConfig() {
+  const githubUser = document.getElementById('githubUser').value.trim();
+  const repoName = document.getElementById('repoName').value.trim() || 'milk-o-meter';
+  const githubToken = document.getElementById('githubToken').value.trim();
+  
+  if (!githubUser || !githubToken) {
+    alert('Por favor, completa todos los campos');
+    return;
+  }
+  
+  config = {
+    githubUser,
+    repoName,
+    githubToken,
+    configuredAt: new Date().toISOString()
+  };
+  
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  
+  const modal = bootstrap.Modal.getInstance(document.getElementById('configModal'));
+  if (modal) modal.hide();
+  
+  alert('✅ Configuración guardada. Ahora se sincronizará con GitHub.');
+  
+  // Forzar sincronización inicial
+  sincronizarConGitHub();
+}
+
+function mostrarConfig() {
+  const modal = new bootstrap.Modal(document.getElementById('configModal'));
+  
+  if (config) {
+    document.getElementById('githubUser').value = config.githubUser || '';
+    document.getElementById('repoName').value = config.repoName || 'milk-o-meter';
+    document.getElementById('githubToken').value = config.githubToken || '';
+  }
+  
+  modal.show();
+}
+
+/************ GESTIÓN DE DATOS CON GITHUB ************/
+async function cargarDatos() {
+  // Primero intentar cargar desde GitHub
+  let datosGitHub = [];
+  
+  if (config && config.githubUser && config.githubToken) {
+    try {
+      datosGitHub = await obtenerDatosDeGitHub();
+      if (datosGitHub.length > 0) {
+        tomas = datosGitHub;
+        actualizarSyncStatus('success', 'Sincronizado con GitHub');
+        console.log(`Cargadas ${tomas.length} tomas desde GitHub`);
+      }
+    } catch (error) {
+      console.warn('No se pudo cargar desde GitHub:', error);
+      // Continuar con datos locales
+    }
+  }
+  
+  // Si no hay datos en GitHub, cargar locales
+  if (tomas.length === 0) {
+    const datosLocales = localStorage.getItem(DATA_KEY);
+    if (datosLocales) {
+      try {
+        tomas = JSON.parse(datosLocales);
+        console.log(`Cargadas ${tomas.length} tomas desde localStorage`);
+      } catch (e) {
+        console.error('Error cargando datos locales:', e);
+        tomas = [];
+      }
+    }
+  }
+  
+  // Si aún no hay datos, cargar históricos
+  if (tomas.length === 0) {
+    tomas = [...DATOS_HISTORICOS];
+    console.log(`Cargadas ${tomas.length} tomas históricas`);
+  }
+  
+  // Guardar datos localmente como backup
+  guardarDatosLocales();
   
   // Renderizar
   renderizarTomas();
   actualizarResumen();
+  actualizarInfo();
 }
 
-function guardarDatos() {
-  // Guardar en localStorage
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tomas));
+async function guardarDatos() {
+  // Guardar localmente primero (siempre disponible)
+  guardarDatosLocales();
   
-  // Actualizar estado
-  actualizarSyncStatus();
-  
-  // También guardar en URL (para compartir)
-  guardarEnURL();
-}
-
-function cargarDesdeURL() {
-  try {
-    const hash = window.location.hash.substring(1);
-    if (hash) {
-      const datosURL = JSON.parse(atob(hash));
-      if (Array.isArray(datosURL) && datosURL.length > tomas.length) {
-        tomas = datosURL;
-        console.log(`Cargadas ${tomas.length} tomas desde URL`);
-      }
+  // Intentar sincronizar con GitHub
+  if (config && config.githubUser && config.githubToken) {
+    try {
+      await guardarDatosEnGitHub();
+      actualizarSyncStatus('success', 'Guardado en GitHub');
+    } catch (error) {
+      console.warn('No se pudo guardar en GitHub:', error);
+      actualizarSyncStatus('warning', 'Guardado localmente (sin conexión)');
     }
-  } catch (e) {
-    // Silenciar error, no es crítico
+  } else {
+    actualizarSyncStatus('warning', 'Guardado localmente (sin configuración GitHub)');
   }
 }
 
-function guardarEnURL() {
-  if (tomas.length > 0) {
-    const datosCodificados = btoa(JSON.stringify(tomas));
-    window.location.hash = datosCodificados;
+function guardarDatosLocales() {
+  localStorage.setItem(DATA_KEY, JSON.stringify(tomas));
+}
+
+async function sincronizarConGitHub() {
+  if (!config || !config.githubUser || !config.githubToken) {
+    return;
+  }
+  
+  try {
+    const datosRemotos = await obtenerDatosDeGitHub();
+    
+    if (datosRemotos.length === 0) {
+      // No hay datos remotos, subir los locales
+      await guardarDatosEnGitHub();
+    } else {
+      // Sincronizar: combinar datos locales y remotos
+      const idsLocales = new Set(tomas.map(t => t.id));
+      const idsRemotos = new Set(datosRemotos.map(t => t.id));
+      
+      // Añadir datos remotos que no tenemos localmente
+      datosRemotos.forEach(tomaRemota => {
+        if (!idsLocales.has(tomaRemota.id)) {
+          tomas.push(tomaRemota);
+        }
+      });
+      
+      // Actualizar datos locales que sean más recientes
+      tomas.forEach((tomaLocal, index) => {
+        const tomaRemota = datosRemotos.find(t => t.id === tomaLocal.id);
+        if (tomaRemota) {
+          const fechaLocal = new Date(tomaLocal.updated_at || tomaLocal.created_at);
+          const fechaRemota = new Date(tomaRemota.updated_at || tomaRemota.created_at);
+          
+          if (fechaRemota > fechaLocal) {
+            // El dato remoto es más reciente
+            tomas[index] = tomaRemota;
+          }
+        }
+      });
+      
+      // Ordenar por fecha
+      tomas.sort((a, b) => {
+        const fechaA = new Date(a.updated_at || a.created_at);
+        const fechaB = new Date(b.updated_at || b.created_at);
+        return fechaB - fechaA;
+      });
+      
+      // Guardar cambios
+      guardarDatosLocales();
+      renderizarTomas();
+      actualizarResumen();
+    }
+    
+    actualizarSyncStatus('success', 'Sincronizado');
+  } catch (error) {
+    console.warn('Error sincronizando:', error);
+    actualizarSyncStatus('danger', 'Error de sincronización');
   }
 }
 
-function sincronizar() {
-  // En una app real, aquí se sincronizaría con un servidor
-  // Por ahora solo actualizamos el estado
-  actualizarSyncStatus();
-  document.getElementById('btnSync').innerHTML = '<i class="bi bi-cloud-check"></i>';
-  setTimeout(() => {
-    document.getElementById('btnSync').innerHTML = '<i class="bi bi-cloud-arrow-up"></i>';
-  }, 1000);
+/************ API GITHUB ************/
+async function obtenerDatosDeGitHub() {
+  if (!config) return [];
+  
+  try {
+    const url = `https://api.github.com/repos/${config.githubUser}/${config.repoName}/contents/tomas.json`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `token ${config.githubToken}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      const contenido = atob(data.content);
+      return JSON.parse(contenido);
+    } else if (response.status === 404) {
+      // El archivo no existe aún
+      return [];
+    } else {
+      throw new Error(`GitHub API error: ${response.status}`);
+    }
+  } catch (error) {
+    console.error('Error obteniendo datos de GitHub:', error);
+    throw error;
+  }
 }
 
-function actualizarSyncStatus() {
+async function guardarDatosEnGitHub() {
+  if (!config) return;
+  
+  try {
+    const url = `https://api.github.com/repos/${config.githubUser}/${config.repoName}/contents/tomas.json`;
+    
+    // Primero obtener el SHA del archivo actual (si existe)
+    let sha = null;
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `token ${config.githubToken}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        sha = data.sha;
+      }
+    } catch (e) {
+      // El archivo no existe aún, no hay problema
+    }
+    
+    // Preparar datos
+    const contenido = JSON.stringify(tomas, null, 2);
+    const contenidoCodificado = btoa(contenido);
+    
+    const body = {
+      message: `Actualización tomas ${new Date().toLocaleString()}`,
+      content: contenidoCodificado,
+      sha: sha
+    };
+    
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `token ${config.githubToken}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.status}`);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error guardando datos en GitHub:', error);
+    throw error;
+  }
+}
+
+/************ INTERFAZ ************/
+function actualizarSyncStatus(status, texto) {
+  const statusElement = document.getElementById('syncStatus');
+  const badgeClass = {
+    'success': 'bg-success',
+    'warning': 'bg-warning',
+    'danger': 'bg-danger'
+  }[status] || 'bg-secondary';
+  
+  statusElement.className = `badge ${badgeClass}`;
+  statusElement.textContent = `● ${texto}`;
+  
   const ahora = new Date();
   const hora = ahora.getHours().toString().padStart(2, '0');
   const minutos = ahora.getMinutes().toString().padStart(2, '0');
-  document.getElementById('syncStatus').textContent = 
-    `Última sincronización: ${hora}:${minutos} (${tomas.length} tomas)`;
+  document.getElementById('lastSync').textContent = `${hora}:${minutos}`;
 }
 
-/************ GESTIÓN DE TOMAS ************/
+function actualizarInfo() {
+  const hoy = new Date().toISOString().split('T')[0];
+  const tomasHoy = tomas.filter(t => t.fecha === hoy).length;
+  const totalTomas = tomas.length;
+  
+  document.getElementById('totalRegistros').textContent = 
+    `${tomasHoy} tomas hoy | ${totalTomas} en total`;
+}
+
+// ... (las funciones de gestión de tomas, renderizado, etc. son las mismas que antes)
+// Solo necesito agregar las funciones básicas de UI aquí:
+
 function nuevaToma() {
   editId = null;
   document.getElementById('formToma').classList.remove('d-none');
@@ -352,11 +646,10 @@ function nuevaToma() {
   document.getElementById('inicio').value = `${hora}:${minutos}`;
   document.getElementById('fin').value = '';
   document.getElementById('comentarios').value = '';
-  setStars(3); // Valor por defecto
-  document.getElementById('lado').value = 'izquierda';
+  setStars(3);
+  document.getElementById('lado').value = 'Izquierdo';
   document.getElementById('btnGuardar').innerHTML = '<i class="bi bi-save"></i> Guardar Toma';
   
-  // Scroll suave al formulario
   document.getElementById('formToma').scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -386,12 +679,11 @@ function setStars(n) {
     }
   });
   
-  // Actualizar texto
   const textos = ['😟 Poca', '😐 Regular', '🙂 Bien', '😊 Muy bien', '😄 Excelente'];
   texto.textContent = n > 0 ? textos[n-1] : 'Sin valorar';
 }
 
-function guardarToma() {
+async function guardarToma() {
   const inicio = document.getElementById('inicio').value;
   const fin = document.getElementById('fin').value;
   const lado = document.getElementById('lado').value;
@@ -413,46 +705,27 @@ function guardarToma() {
     estrellas: estrellasValor,
     lado: lado,
     comentarios: comentarios || '',
-    created_at: ahora.toISOString(),
+    created_at: editId ? undefined : ahora.toISOString(),
     updated_at: ahora.toISOString()
   };
   
   if (editId) {
-    // Editar toma existente
     const index = tomas.findIndex(t => t.id === editId);
     if (index !== -1) {
       nuevaToma.created_at = tomas[index].created_at;
       tomas[index] = nuevaToma;
     }
   } else {
-    // Nueva toma
     tomas.unshift(nuevaToma);
   }
   
-  // Guardar y renderizar
-  guardarDatos();
+  await guardarDatos();
   renderizarTomas();
   actualizarResumen();
+  actualizarInfo();
   
-  // Cerrar formulario
   document.getElementById('formToma').classList.add('d-none');
-  
-  // Mostrar confirmación
-  const toast = document.createElement('div');
-  toast.className = 'position-fixed bottom-0 end-0 p-3';
-  toast.innerHTML = `
-    <div class="toast show" role="alert">
-      <div class="toast-header bg-success text-white">
-        <strong class="me-auto">✅ Toma guardada</strong>
-        <button type="button" class="btn-close btn-close-white" onclick="this.parentElement.parentElement.remove()"></button>
-      </div>
-      <div class="toast-body">
-        ${editId ? 'Toma actualizada' : 'Nueva toma registrada'}
-      </div>
-    </div>
-  `;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3000);
+  mostrarNotificacion(editId ? 'Toma actualizada ✓' : 'Nueva toma guardada ✓');
 }
 
 function editarToma(id) {
@@ -470,22 +743,20 @@ function editarToma(id) {
   document.getElementById('comentarios').value = toma.comentarios || '';
   document.getElementById('btnGuardar').innerHTML = '<i class="bi bi-check-circle"></i> Actualizar';
   
-  // Scroll suave al formulario
   document.getElementById('formToma').scrollIntoView({ behavior: 'smooth' });
 }
 
 function eliminarToma(id) {
-  if (!confirm('¿Eliminar esta toma? Esta acción no se puede deshacer.')) {
-    return;
-  }
+  if (!confirm('¿Eliminar esta toma?')) return;
   
   tomas = tomas.filter(t => t.id !== id);
   guardarDatos();
   renderizarTomas();
   actualizarResumen();
+  actualizarInfo();
+  mostrarNotificacion('Toma eliminada');
 }
 
-/************ RENDERIZADO ************/
 function renderizarTomas() {
   const lista = document.getElementById('lista');
   
@@ -501,9 +772,8 @@ function renderizarTomas() {
   }
   
   let html = '';
-  
-  // Agrupar por fecha
   const tomasPorFecha = {};
+  
   tomas.forEach(toma => {
     const fecha = toma.fecha;
     if (!tomasPorFecha[fecha]) {
@@ -512,11 +782,9 @@ function renderizarTomas() {
     tomasPorFecha[fecha].push(toma);
   });
   
-  // Ordenar fechas (más reciente primero)
   const fechas = Object.keys(tomasPorFecha).sort((a, b) => b.localeCompare(a));
   
   fechas.forEach(fecha => {
-    // Formatear fecha bonita
     const fechaObj = new Date(fecha);
     const hoy = new Date().toISOString().split('T')[0];
     const ayer = new Date(Date.now() - 86400000).toISOString().split('T')[0];
@@ -526,27 +794,25 @@ function renderizarTomas() {
     else if (fecha === ayer) fechaTexto = 'Ayer';
     else fechaTexto = fechaObj.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
     
-    html += `
-      <div class="mb-3">
-        <h6 class="text-muted mb-2"><i class="bi bi-calendar"></i> ${fechaTexto}</h6>
-    `;
+    html += `<div class="mb-3"><h6 class="text-muted mb-2"><i class="bi bi-calendar"></i> ${fechaTexto}</h6>`;
     
     tomasPorFecha[fecha].forEach(toma => {
-      const claseLado = `toma-${toma.lado}`;
+      const claseLado = `toma-${toma.lado.toLowerCase()}`;
       const iconoLado = {
-        'izquierda': '👈',
-        'derecha': '👉',
+        'izquierdo': '👈',
+        'derecho': '👉',
         'ambos': '🤲'
-      }[toma.lado] || '🤱';
+      }[toma.lado.toLowerCase()] || '🤱';
       
       const estrellasHTML = toma.estrellas ? 
         `<span class="badge bg-warning text-dark ms-2"><i class="bi bi-star-fill"></i> ${toma.estrellas}</span>` : '';
       
       const duracion = calcularDuracion(toma.hora_inicio, toma.hora_fin);
+      const horaFin = toma.hora_fin || '<em class="text-muted">En curso...</em>';
       
       html += `
         <div class="list-group-item ${claseLado}">
-          <div class="d-flex justify-content-between align-items-center">
+          <div class="d-flex justify-content-between align-items-start">
             <div style="flex: 1;">
               <div class="d-flex align-items-center mb-1">
                 <span class="chip me-2">${iconoLado}</span>
@@ -560,6 +826,11 @@ function renderizarTomas() {
                   <small><i class="bi bi-chat-left"></i> ${toma.comentarios}</small>
                 </div>
               ` : ''}
+              <div class="mt-1">
+                <small class="text-muted">
+                  <i class="bi bi-clock-history"></i> ${new Date(toma.updated_at || toma.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                </small>
+              </div>
             </div>
             <div class="btn-group btn-group-sm">
               <button class="btn btn-outline-primary" onclick="editarToma(${toma.id})">
@@ -584,7 +855,6 @@ function actualizarResumen() {
   const hoy = new Date().toISOString().split('T')[0];
   const tomasHoy = tomas.filter(t => t.fecha === hoy);
   
-  // Calcular tiempo total
   let totalMinutos = 0;
   tomasHoy.forEach(t => {
     if (t.hora_inicio && t.hora_fin) {
@@ -593,7 +863,6 @@ function actualizarResumen() {
     }
   });
   
-  // Última toma
   let ultimaToma = '--:--';
   if (tomasHoy.length > 0) {
     const ultima = tomasHoy.reduce((latest, toma) => {
@@ -602,17 +871,14 @@ function actualizarResumen() {
     ultimaToma = ultima.hora_inicio;
   }
   
-  // Actualizar UI
   document.getElementById('totalTomas').textContent = tomasHoy.length;
   document.getElementById('tiempoTotal').textContent = 
     `${Math.floor(totalMinutos/60)}h ${totalMinutos%60}m`;
   document.getElementById('ultimaToma').textContent = ultimaToma;
 }
 
-/************ UTILIDADES ************/
 function calcularMinutos(inicio, fin) {
   if (!inicio || !fin) return 0;
-  
   try {
     const [h1, m1] = inicio.split(':').map(Number);
     const [h2, m2] = fin.split(':').map(Number);
@@ -624,74 +890,29 @@ function calcularMinutos(inicio, fin) {
 
 function calcularDuracion(inicio, fin) {
   if (!inicio || !fin) return '';
-  
   const minutos = calcularMinutos(inicio, fin);
   if (minutos <= 0) return '';
-  
   const horas = Math.floor(minutos / 60);
   const mins = minutos % 60;
-  
-  if (horas > 0) {
-    return `${horas}h ${mins}m`;
-  } else {
-    return `${mins}m`;
-  }
+  return horas > 0 ? `${horas}h ${mins}m` : `${mins}m`;
 }
 
-/************ EXPORTAR/IMPORTAR ************/
-function exportarDatos() {
-  const datosCodificados = btoa(JSON.stringify(tomas));
-  document.getElementById('backupData').value = datosCodificados;
-  
-  // También copiar al portapapeles
-  navigator.clipboard.writeText(datosCodificados).then(() => {
-    alert('Datos copiados al portapapeles. ¡Guárdalos en un lugar seguro!');
-  });
+function mostrarNotificacion(mensaje) {
+  const toast = document.createElement('div');
+  toast.className = 'position-fixed bottom-0 end-0 p-3';
+  toast.innerHTML = `
+    <div class="toast show" role="alert">
+      <div class="toast-header bg-success text-white">
+        <strong class="me-auto">✅ ${mensaje}</strong>
+        <button type="button" class="btn-close btn-close-white" onclick="this.parentElement.parentElement.remove()"></button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
 }
 
-function importarDatos() {
-  const datos = document.getElementById('restoreData').value.trim();
-  if (!datos) {
-    alert('Por favor, pega el código de respaldo');
-    return;
-  }
-  
-  try {
-    const datosImportados = JSON.parse(atob(datos));
-    if (Array.isArray(datosImportados)) {
-      // Mezclar con datos existentes, evitando duplicados
-      const idsExistentes = new Set(tomas.map(t => t.id));
-      datosImportados.forEach(toma => {
-        if (!idsExistentes.has(toma.id)) {
-          tomas.push(toma);
-        }
-      });
-      
-      // Ordenar por fecha
-      tomas.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      
-      guardarDatos();
-      renderizarTomas();
-      actualizarResumen();
-      
-      // Cerrar modal
-      bootstrap.Modal.getInstance(document.getElementById('backupModal')).hide();
-      alert(`¡Datos importados! Ahora tienes ${tomas.length} tomas.`);
-    } else {
-      alert('Formato de datos incorrecto');
-    }
-  } catch (e) {
-    alert('Error importando datos: ' + e.message);
-  }
-}
-
-/************ COMPARTIR ************/
-function mostrarBackupModal() {
-  const modal = new bootstrap.Modal(document.getElementById('backupModal'));
-  modal.show();
-}
-
-// Exponer funciones globalmente
+// Exponer funciones
 window.login = login;
 window.logout = logout;
 window.nuevaToma = nuevaToma;
@@ -701,10 +922,8 @@ window.setStars = setStars;
 window.guardarToma = guardarToma;
 window.editarToma = editarToma;
 window.eliminarToma = eliminarToma;
-window.sincronizar = sincronizar;
-window.exportarDatos = exportarDatos;
-window.importarDatos = importarDatos;
-window.mostrarBackupModal = mostrarBackupModal;
+window.mostrarConfig = mostrarConfig;
+window.guardarConfig = guardarConfig;
 </script>
 </body>
 </html>
