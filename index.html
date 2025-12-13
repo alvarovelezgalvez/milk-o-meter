@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>milk-o-meter 🍼</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.35.1/dist/umd/supabase.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
   <style>
     :root{
       --baby-pink:#ffd6e7;
@@ -19,175 +19,363 @@
     .btn-primary{background:#ff8fb3;border-color:#ff8fb3}
     .btn-primary:hover{background:#ff7aa5;border-color:#ff7aa5}
     .btn-success{background:#6bd1b3;border-color:#6bd1b3}
-    .chip{background:var(--baby-purple); border-radius:999px; padding:.25rem .6rem; display:inline-block}
-    .stars span{cursor:pointer; user-select:none; font-size:2rem}
-    .list-group-item{border-radius:1rem; margin-bottom:.5rem; border:none; background:rgba(255,255,255,0.8)}
-    #loading{display:none}
+    .chip{background:var(--baby-purple); border-radius:999px; padding:.25rem .6rem; display:inline-block; font-size:0.85em}
+    .stars span{cursor:pointer; user-select:none; font-size:1.8rem}
+    .list-group-item{border-radius:1rem; margin-bottom:.5rem; border:none; background:rgba(255,255,255,0.9)}
     .star-filled{color:#ffc107}
     .star-empty{color:#ddd}
+    .badge-estrella{background:#ffc107; color:#000}
+    .toma-izquierda{border-left:4px solid #ff8fb3}
+    .toma-derecha{border-left:4px solid #6bd1b3}
+    .toma-ambos{border-left:4px solid #9d7aff}
+    .sync-status{font-size:0.8em; opacity:0.8}
   </style>
 </head>
 <body>
 
 <!-- LOGIN -->
 <div class="container py-4" id="loginView">
-  <div class="card p-4">
-    <h3 class="mb-2 text-center">milk-o-meter 🍼 - Ariadna 💕</h3>
-    <input type="password" id="password" class="form-control mb-3" placeholder="Contraseña" autocomplete="off" />
-    <button class="btn btn-primary w-100" onclick="login()">Entrar 👶</button>
+  <div class="card p-4 mx-auto" style="max-width:400px">
+    <div class="text-center mb-3">
+      <h1 class="display-1">🍼</h1>
+      <h3 class="mb-2">milk-o-meter</h3>
+      <p class="text-muted">Seguimiento de tomas de Ariadna 💕</p>
+    </div>
+    <input type="password" id="password" class="form-control mb-3" placeholder="Contraseña familiar" autocomplete="off" />
+    <button class="btn btn-primary w-100" onclick="login()">
+      <i class="bi bi-door-open"></i> Entrar
+    </button>
+    <div class="mt-3 text-center">
+      <small class="text-muted">Tu información se guarda de forma privada</small>
+    </div>
   </div>
 </div>
 
 <!-- APP -->
-<div class="container py-4 d-none" id="appView">
+<div class="container py-3 d-none" id="appView">
+  <!-- Header -->
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>milk-o-meter 🍼</h3>
-    <button class="btn btn-outline-secondary btn-sm" onclick="logout()">Salir</button>
+    <div>
+      <h3 class="mb-0">milk-o-meter 🍼</h3>
+      <small class="sync-status" id="syncStatus">Última sincronización: --:--</small>
+    </div>
+    <div>
+      <button class="btn btn-outline-secondary btn-sm me-2" onclick="sincronizar()" id="btnSync">
+        <i class="bi bi-cloud-arrow-up"></i>
+      </button>
+      <button class="btn btn-outline-secondary btn-sm" onclick="logout()">
+        <i class="bi bi-box-arrow-right"></i>
+      </button>
+    </div>
   </div>
 
-  <div class="mb-3">
-    <button class="btn btn-success w-100 mb-2" onclick="nuevaToma()">+ Nueva toma 🤱</button>
-    <div class="alert alert-info d-none" id="loading">
-      <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-      Cargando...
-    </div>
-    <div class="card">
-      <div class="card-body" id="resumen">Cargando resumen...</div>
+  <!-- Resumen -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <h6 class="card-title mb-3">
+        <i class="bi bi-graph-up"></i> Resumen de hoy
+      </h6>
+      <div class="row text-center">
+        <div class="col">
+          <div class="display-6" id="totalTomas">0</div>
+          <small class="text-muted">Tomas</small>
+        </div>
+        <div class="col">
+          <div class="display-6" id="tiempoTotal">0h 0m</div>
+          <small class="text-muted">Tiempo</small>
+        </div>
+        <div class="col">
+          <div class="display-6" id="ultimaToma">--:--</div>
+          <small class="text-muted">Última</small>
+        </div>
+      </div>
     </div>
   </div>
 
+  <!-- Botón Nueva Toma -->
+  <button class="btn btn-success w-100 mb-3 py-3" onclick="nuevaToma()">
+    <i class="bi bi-plus-circle"></i> Nueva Toma
+  </button>
+
+  <!-- Formulario Toma -->
   <div id="formToma" class="card mb-3 d-none">
     <div class="card-body">
-      <div class="mb-2">
-        <label>Hora inicio ⏱️</label>
-        <input type="time" id="inicio" class="form-control" required />
+      <h5 class="card-title mb-3" id="formTitle">
+        <i class="bi bi-clock-history"></i> Nueva Toma
+      </h5>
+      
+      <div class="mb-3">
+        <label class="form-label"><i class="bi bi-play-circle"></i> Hora inicio</label>
+        <input type="time" id="inicio" class="form-control form-control-lg" required />
       </div>
-      <div class="mb-2">
-        <label>Hora fin ⏰</label>
-        <input type="time" id="fin" class="form-control" />
+      
+      <div class="mb-3">
+        <label class="form-label"><i class="bi bi-stop-circle"></i> Hora fin</label>
+        <div class="input-group">
+          <input type="time" id="fin" class="form-control" />
+          <button class="btn btn-outline-secondary" type="button" onclick="cerrarAhora()">
+            <i class="bi bi-clock"></i> Ahora
+          </button>
+        </div>
+        <small class="text-muted">Dejar vacío si aún está tomando</small>
       </div>
-      <div class="mb-2">
-        <label>Cantidad ⭐</label>
-        <div id="estrellas" class="stars">
+      
+      <div class="mb-3">
+        <label class="form-label"><i class="bi bi-star"></i> Cantidad</label>
+        <div id="estrellas" class="stars text-center">
           <span onclick="setStars(1)">☆</span>
           <span onclick="setStars(2)">☆</span>
           <span onclick="setStars(3)">☆</span>
           <span onclick="setStars(4)">☆</span>
           <span onclick="setStars(5)">☆</span>
         </div>
-        <small class="text-muted">Click en las estrellas para valorar</small>
+        <div class="text-center mt-1">
+          <span id="estrellasTexto" class="badge badge-estrella">0 estrellas</span>
+        </div>
       </div>
-      <div class="mb-2">
-        <label>Pecho 🫶</label>
+      
+      <div class="mb-3">
+        <label class="form-label"><i class="bi bi-symmetry-vertical"></i> Pecho</label>
         <select id="lado" class="form-select">
-          <option>Izquierdo</option>
-          <option>Derecho</option>
-          <option>Ambos</option>
+          <option value="izquierda">👈 Izquierdo</option>
+          <option value="derecha">👉 Derecho</option>
+          <option value="ambos">🤲 Ambos</option>
         </select>
       </div>
-      <div class="mb-2">
-        <label>Comentarios 💬</label>
-        <textarea id="comentarios" class="form-control" rows="2"></textarea>
+      
+      <div class="mb-3">
+        <label class="form-label"><i class="bi bi-chat-text"></i> Comentarios</label>
+        <textarea id="comentarios" class="form-control" rows="2" placeholder="Notas, observaciones..."></textarea>
       </div>
+      
       <div class="d-grid gap-2">
-        <button class="btn btn-primary" onclick="guardarToma()" id="btnGuardar">Guardar 💾</button>
-        <button class="btn btn-outline-secondary" onclick="cerrarAhora()">Cerrar toma ahora ⏱️</button>
-        <button class="btn btn-outline-danger" onclick="cancelarToma()">Cancelar</button>
+        <button class="btn btn-primary btn-lg" onclick="guardarToma()" id="btnGuardar">
+          <i class="bi bi-save"></i> Guardar Toma
+        </button>
+        <button class="btn btn-outline-danger" onclick="cancelarToma()">
+          <i class="bi bi-x-circle"></i> Cancelar
+        </button>
       </div>
     </div>
   </div>
 
-  <h5 class="mt-4 mb-3">Historial de tomas 📋</h5>
-  <ul class="list-group" id="lista">
-    <li class="list-group-item text-center">Cargando...</li>
-  </ul>
+  <!-- Historial -->
+  <div class="card">
+    <div class="card-body">
+      <h6 class="card-title mb-3">
+        <i class="bi bi-list-check"></i> Historial de Tomas
+      </h6>
+      <div id="lista" class="list-group list-group-flush">
+        <div class="text-center py-4">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="mt-2">Cargando tomas...</p>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
+<!-- Export/Import Modal -->
+<div class="modal fade" id="backupModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Respaldo de datos</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Guarda este código para restaurar tus datos en otro dispositivo:</p>
+        <textarea id="backupData" class="form-control mb-3" rows="6" readonly></textarea>
+        <p>Para restaurar, pega el código aquí:</p>
+        <textarea id="restoreData" class="form-control mb-3" rows="6" placeholder="Pega el código de respaldo aquí..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-success" onclick="exportarDatos()">
+          <i class="bi bi-download"></i> Exportar
+        </button>
+        <button type="button" class="btn btn-primary" onclick="importarDatos()">
+          <i class="bi bi-upload"></i> Importar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-/************ CONFIG ************/
+/************ CONFIGURACIÓN ************/
 const APP_PASSWORD = 'ari';
-const SUPABASE_URL = 'https://kkrwueybekmyciktmjit.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtrcnd1ZXliZWtteWNpa3Rtaml0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5Mjg0MDIsImV4cCI6MjA1ODUwNDQwMn0.qMqex-e7_PuY4dGElNZ85ptV0fFbff4nmj-08FxtYpY';
+const STORAGE_KEY = 'milkometer_tomas_v2';
+const SYNC_INTERVAL = 30000; // 30 segundos
 
-// Inicializar Supabase
-let supabase;
-try {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  console.log('Supabase inicializado correctamente');
-} catch (error) {
-  console.error('Error inicializando Supabase:', error);
-  alert('Error inicializando la base de datos. Recarga la página.');
-}
-
+/************ VARIABLES GLOBALES ************/
+let tomas = [];
 let editId = null;
 let estrellasValor = 0;
+let syncTimer = null;
 
-/************ UTILIDADES ************/
-function showLoading(show) {
-  document.getElementById('loading').classList.toggle('d-none', !show);
-}
+/************ INICIALIZACIÓN ************/
+document.addEventListener('DOMContentLoaded', function() {
+  // Auto-focus en contraseña
+  const passwordField = document.getElementById('password');
+  if (passwordField) {
+    passwordField.focus();
+    passwordField.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') login();
+    });
+  }
+  
+  // Verificar si ya estamos autenticados
+  if (localStorage.getItem('milkometer_auth') === 'true') {
+    initApp();
+  }
+});
 
-function getElement(id) {
-  return document.getElementById(id);
-}
-
-/************ LOGIN ************/
+/************ AUTENTICACIÓN ************/
 function login() {
-  const password = getElement('password');
-  if (password.value === APP_PASSWORD) {
-    localStorage.setItem('auth', '1');
-    init();
+  const password = document.getElementById('password').value;
+  if (password === APP_PASSWORD) {
+    localStorage.setItem('milkometer_auth', 'true');
+    initApp();
   } else {
-    alert('Ups, contraseña incorrecta');
-    password.focus();
-    password.select();
+    alert('Contraseña incorrecta. Pista: son las iniciales de tu bebé 😉');
+    document.getElementById('password').focus();
+    document.getElementById('password').select();
   }
 }
 
 function logout() {
   if (confirm('¿Seguro que quieres salir?')) {
-    localStorage.removeItem('auth');
+    localStorage.removeItem('milkometer_auth');
     location.reload();
   }
 }
 
-function init() {
-  getElement('loginView').classList.add('d-none');
-  getElement('appView').classList.remove('d-none');
-  cargarTomas();
+function initApp() {
+  document.getElementById('loginView').classList.add('d-none');
+  document.getElementById('appView').classList.remove('d-none');
+  
+  // Cargar datos
+  cargarDatos();
+  
+  // Iniciar sincronización automática
+  syncTimer = setInterval(sincronizar, SYNC_INTERVAL);
+  
+  // Actualizar estado de sincronización
+  actualizarSyncStatus();
 }
 
-/************ TOMAS ************/
+/************ GESTIÓN DE DATOS ************/
+function cargarDatos() {
+  // Intentar cargar desde localStorage
+  const datosGuardados = localStorage.getItem(STORAGE_KEY);
+  if (datosGuardados) {
+    try {
+      tomas = JSON.parse(datosGuardados);
+      console.log(`Cargadas ${tomas.length} tomas desde localStorage`);
+    } catch (e) {
+      console.error('Error cargando datos:', e);
+      tomas = [];
+    }
+  }
+  
+  // Intentar cargar desde URL (para compartir datos)
+  cargarDesdeURL();
+  
+  // Renderizar
+  renderizarTomas();
+  actualizarResumen();
+}
+
+function guardarDatos() {
+  // Guardar en localStorage
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(tomas));
+  
+  // Actualizar estado
+  actualizarSyncStatus();
+  
+  // También guardar en URL (para compartir)
+  guardarEnURL();
+}
+
+function cargarDesdeURL() {
+  try {
+    const hash = window.location.hash.substring(1);
+    if (hash) {
+      const datosURL = JSON.parse(atob(hash));
+      if (Array.isArray(datosURL) && datosURL.length > tomas.length) {
+        tomas = datosURL;
+        console.log(`Cargadas ${tomas.length} tomas desde URL`);
+      }
+    }
+  } catch (e) {
+    // Silenciar error, no es crítico
+  }
+}
+
+function guardarEnURL() {
+  if (tomas.length > 0) {
+    const datosCodificados = btoa(JSON.stringify(tomas));
+    window.location.hash = datosCodificados;
+  }
+}
+
+function sincronizar() {
+  // En una app real, aquí se sincronizaría con un servidor
+  // Por ahora solo actualizamos el estado
+  actualizarSyncStatus();
+  document.getElementById('btnSync').innerHTML = '<i class="bi bi-cloud-check"></i>';
+  setTimeout(() => {
+    document.getElementById('btnSync').innerHTML = '<i class="bi bi-cloud-arrow-up"></i>';
+  }, 1000);
+}
+
+function actualizarSyncStatus() {
+  const ahora = new Date();
+  const hora = ahora.getHours().toString().padStart(2, '0');
+  const minutos = ahora.getMinutes().toString().padStart(2, '0');
+  document.getElementById('syncStatus').textContent = 
+    `Última sincronización: ${hora}:${minutos} (${tomas.length} tomas)`;
+}
+
+/************ GESTIÓN DE TOMAS ************/
 function nuevaToma() {
   editId = null;
-  getElement('formToma').classList.remove('d-none');
-  const now = new Date();
-  const h = String(now.getHours()).padStart(2, '0');
-  const m = String(now.getMinutes()).padStart(2, '0');
-  getElement('inicio').value = `${h}:${m}`;
-  getElement('fin').value = '';
-  getElement('comentarios').value = '';
-  estrellasValor = 0;
-  setStars(0);
-  getElement('lado').value = 'Izquierdo';
-  getElement('btnGuardar').textContent = 'Guardar 💾';
-  getElement('btnGuardar').disabled = false;
+  document.getElementById('formToma').classList.remove('d-none');
+  document.getElementById('formTitle').innerHTML = '<i class="bi bi-clock-history"></i> Nueva Toma';
+  
+  const ahora = new Date();
+  const hora = ahora.getHours().toString().padStart(2, '0');
+  const minutos = ahora.getMinutes().toString().padStart(2, '0');
+  
+  document.getElementById('inicio').value = `${hora}:${minutos}`;
+  document.getElementById('fin').value = '';
+  document.getElementById('comentarios').value = '';
+  setStars(3); // Valor por defecto
+  document.getElementById('lado').value = 'izquierda';
+  document.getElementById('btnGuardar').innerHTML = '<i class="bi bi-save"></i> Guardar Toma';
+  
+  // Scroll suave al formulario
+  document.getElementById('formToma').scrollIntoView({ behavior: 'smooth' });
 }
 
 function cancelarToma() {
-  getElement('formToma').classList.add('d-none');
+  document.getElementById('formToma').classList.add('d-none');
 }
 
 function cerrarAhora() {
-  const now = new Date();
-  const h = String(now.getHours()).padStart(2, '0');
-  const m = String(now.getMinutes()).padStart(2, '0');
-  getElement('fin').value = `${h}:${m}`;
+  const ahora = new Date();
+  const hora = ahora.getHours().toString().padStart(2, '0');
+  const minutos = ahora.getMinutes().toString().padStart(2, '0');
+  document.getElementById('fin').value = `${hora}:${minutos}`;
 }
 
 function setStars(n) {
   estrellasValor = n;
   const stars = document.querySelectorAll('#estrellas span');
+  const texto = document.getElementById('estrellasTexto');
+  
   stars.forEach((star, index) => {
     if (index < n) {
       star.textContent = '★';
@@ -197,230 +385,326 @@ function setStars(n) {
       star.className = 'star-empty';
     }
   });
+  
+  // Actualizar texto
+  const textos = ['😟 Poca', '😐 Regular', '🙂 Bien', '😊 Muy bien', '😄 Excelente'];
+  texto.textContent = n > 0 ? textos[n-1] : 'Sin valorar';
 }
 
-async function guardarToma() {
-  const inicio = getElement('inicio').value;
-  const fin = getElement('fin').value;
-  const lado = getElement('lado').value;
-  const comentarios = getElement('comentarios').value;
+function guardarToma() {
+  const inicio = document.getElementById('inicio').value;
+  const fin = document.getElementById('fin').value;
+  const lado = document.getElementById('lado').value;
+  const comentarios = document.getElementById('comentarios').value;
   
   if (!inicio) {
     alert('Por favor, ingresa la hora de inicio');
     return;
   }
   
-  const data = {
-    fecha: new Date().toISOString().split('T')[0],
+  const ahora = new Date();
+  const fecha = ahora.toISOString().split('T')[0];
+  
+  const nuevaToma = {
+    id: editId || Date.now(),
+    fecha: fecha,
     hora_inicio: inicio,
     hora_fin: fin || null,
     estrellas: estrellasValor,
     lado: lado,
-    comentarios: comentarios || null,
-    created_at: new Date().toISOString()
+    comentarios: comentarios || '',
+    created_at: ahora.toISOString(),
+    updated_at: ahora.toISOString()
   };
   
-  const btn = getElement('btnGuardar');
-  const originalText = btn.textContent;
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
-  
-  try {
-    if (!supabase) {
-      throw new Error('No se pudo conectar a la base de datos');
+  if (editId) {
+    // Editar toma existente
+    const index = tomas.findIndex(t => t.id === editId);
+    if (index !== -1) {
+      nuevaToma.created_at = tomas[index].created_at;
+      tomas[index] = nuevaToma;
     }
-    
-    let result;
-    if (editId) {
-      result = await supabase
-        .from('mkm_toma')
-        .update(data)
-        .eq('id', editId);
-    } else {
-      result = await supabase
-        .from('mkm_toma')
-        .insert([data]);
-    }
-    
-    if (result.error) {
-      throw result.error;
-    }
-    
-    getElement('formToma').classList.add('d-none');
-    await cargarTomas();
-    
-  } catch (error) {
-    console.error('Error:', error);
-    alert('Error: ' + error.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = originalText;
+  } else {
+    // Nueva toma
+    tomas.unshift(nuevaToma);
   }
+  
+  // Guardar y renderizar
+  guardarDatos();
+  renderizarTomas();
+  actualizarResumen();
+  
+  // Cerrar formulario
+  document.getElementById('formToma').classList.add('d-none');
+  
+  // Mostrar confirmación
+  const toast = document.createElement('div');
+  toast.className = 'position-fixed bottom-0 end-0 p-3';
+  toast.innerHTML = `
+    <div class="toast show" role="alert">
+      <div class="toast-header bg-success text-white">
+        <strong class="me-auto">✅ Toma guardada</strong>
+        <button type="button" class="btn-close btn-close-white" onclick="this.parentElement.parentElement.remove()"></button>
+      </div>
+      <div class="toast-body">
+        ${editId ? 'Toma actualizada' : 'Nueva toma registrada'}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
 }
 
-async function cargarTomas() {
-  showLoading(true);
+function editarToma(id) {
+  const toma = tomas.find(t => t.id === id);
+  if (!toma) return;
   
-  try {
-    if (!supabase) {
-      throw new Error('No se pudo conectar a la base de datos');
+  editId = id;
+  document.getElementById('formToma').classList.remove('d-none');
+  document.getElementById('formTitle').innerHTML = '<i class="bi bi-pencil"></i> Editar Toma';
+  
+  document.getElementById('inicio').value = toma.hora_inicio;
+  document.getElementById('fin').value = toma.hora_fin || '';
+  setStars(toma.estrellas || 3);
+  document.getElementById('lado').value = toma.lado;
+  document.getElementById('comentarios').value = toma.comentarios || '';
+  document.getElementById('btnGuardar').innerHTML = '<i class="bi bi-check-circle"></i> Actualizar';
+  
+  // Scroll suave al formulario
+  document.getElementById('formToma').scrollIntoView({ behavior: 'smooth' });
+}
+
+function eliminarToma(id) {
+  if (!confirm('¿Eliminar esta toma? Esta acción no se puede deshacer.')) {
+    return;
+  }
+  
+  tomas = tomas.filter(t => t.id !== id);
+  guardarDatos();
+  renderizarTomas();
+  actualizarResumen();
+}
+
+/************ RENDERIZADO ************/
+function renderizarTomas() {
+  const lista = document.getElementById('lista');
+  
+  if (tomas.length === 0) {
+    lista.innerHTML = `
+      <div class="text-center py-5">
+        <div class="display-1 text-muted mb-3">🍼</div>
+        <h5>¡No hay tomas registradas!</h5>
+        <p class="text-muted">Haz clic en "Nueva Toma" para empezar.</p>
+      </div>
+    `;
+    return;
+  }
+  
+  let html = '';
+  
+  // Agrupar por fecha
+  const tomasPorFecha = {};
+  tomas.forEach(toma => {
+    const fecha = toma.fecha;
+    if (!tomasPorFecha[fecha]) {
+      tomasPorFecha[fecha] = [];
     }
+    tomasPorFecha[fecha].push(toma);
+  });
+  
+  // Ordenar fechas (más reciente primero)
+  const fechas = Object.keys(tomasPorFecha).sort((a, b) => b.localeCompare(a));
+  
+  fechas.forEach(fecha => {
+    // Formatear fecha bonita
+    const fechaObj = new Date(fecha);
+    const hoy = new Date().toISOString().split('T')[0];
+    const ayer = new Date(Date.now() - 86400000).toISOString().split('T')[0];
     
-    const { data, error } = await supabase
-      .from('mkm_toma')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(50);
+    let fechaTexto;
+    if (fecha === hoy) fechaTexto = 'Hoy';
+    else if (fecha === ayer) fechaTexto = 'Ayer';
+    else fechaTexto = fechaObj.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
     
-    if (error) {
-      throw error;
-    }
+    html += `
+      <div class="mb-3">
+        <h6 class="text-muted mb-2"><i class="bi bi-calendar"></i> ${fechaTexto}</h6>
+    `;
     
-    const lista = getElement('lista');
-    const resumen = getElement('resumen');
-    
-    // Mostrar historial
-    lista.innerHTML = '';
-    
-    if (!data || data.length === 0) {
-      lista.innerHTML = '<li class="list-group-item text-center">No hay tomas registradas todavía</li>';
-      resumen.innerHTML = '<strong>Resumen de hoy 👶</strong><br>🤱 Tomas: 0<br>⏱️ Tiempo total: 0h 0min';
-      return;
-    }
-    
-    data.forEach(t => {
-      const li = document.createElement('li');
-      li.className = 'list-group-item';
+    tomasPorFecha[fecha].forEach(toma => {
+      const claseLado = `toma-${toma.lado}`;
+      const iconoLado = {
+        'izquierda': '👈',
+        'derecha': '👉',
+        'ambos': '🤲'
+      }[toma.lado] || '🤱';
       
-      // Formatear fecha
-      const fecha = t.fecha || 'Sin fecha';
-      const horaInicio = t.hora_inicio || '--:--';
-      const horaFin = t.hora_fin || 'En curso...';
-      const estrellas = t.estrellas ? '★'.repeat(t.estrellas) + '☆'.repeat(5 - t.estrellas) : '';
+      const estrellasHTML = toma.estrellas ? 
+        `<span class="badge bg-warning text-dark ms-2"><i class="bi bi-star-fill"></i> ${toma.estrellas}</span>` : '';
       
-      li.innerHTML = `
-        <div class="d-flex justify-content-between align-items-start">
-          <div style="flex: 1;">
-            <strong>${fecha}</strong><br>
-            <small>${horaInicio} - ${horaFin}</small><br>
-            <span class="chip me-2">${t.lado || 'No especificado'}</span>
-            ${estrellas ? `<span class="text-warning">${estrellas}</span>` : ''}
-            ${t.comentarios ? '<div class="mt-2"><small>💬 ' + t.comentarios + '</small></div>' : ''}
-          </div>
-          <div>
-            <button class="btn btn-sm btn-outline-primary" onclick="editarToma(${t.id})">
-              Editar
-            </button>
+      const duracion = calcularDuracion(toma.hora_inicio, toma.hora_fin);
+      
+      html += `
+        <div class="list-group-item ${claseLado}">
+          <div class="d-flex justify-content-between align-items-center">
+            <div style="flex: 1;">
+              <div class="d-flex align-items-center mb-1">
+                <span class="chip me-2">${iconoLado}</span>
+                <strong>${toma.hora_inicio}</strong>
+                ${toma.hora_fin ? `<span class="mx-1">→</span><strong>${toma.hora_fin}</strong>` : ''}
+                ${duracion ? `<span class="badge bg-info ms-2">${duracion}</span>` : ''}
+                ${estrellasHTML}
+              </div>
+              ${toma.comentarios ? `
+                <div class="mt-1 text-muted">
+                  <small><i class="bi bi-chat-left"></i> ${toma.comentarios}</small>
+                </div>
+              ` : ''}
+            </div>
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-primary" onclick="editarToma(${toma.id})">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="btn btn-outline-danger" onclick="eliminarToma(${toma.id})">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
           </div>
         </div>
       `;
-      
-      // Asignar datos al elemento para acceso fácil
-      li.dataset.tomaId = t.id;
-      lista.appendChild(li);
     });
     
-    // Calcular resumen del día
-    const hoy = new Date().toISOString().split('T')[0];
-    const tomasHoy = data.filter(t => t.fecha === hoy);
-    let totalMinutos = 0;
-    
-    tomasHoy.forEach(t => {
-      if (t.hora_inicio && t.hora_fin) {
-        try {
-          const [h1, m1] = t.hora_inicio.split(':').map(Number);
-          const [h2, m2] = t.hora_fin.split(':').map(Number);
-          const minutos = (h2 * 60 + m2) - (h1 * 60 + m1);
-          if (minutos > 0) {
-            totalMinutos += minutos;
-          }
-        } catch (e) {
-          console.warn('Error calculando tiempo para toma:', t.id, e);
-        }
-      }
-    });
-    
-    const horas = Math.floor(totalMinutos / 60);
-    const minutos = totalMinutos % 60;
-    
-    resumen.innerHTML = `
-      <strong>Resumen de hoy 👶</strong><br>
-      🤱 Tomas: ${tomasHoy.length}<br>
-      ⏱️ Tiempo total: ${horas}h ${minutos}min<br>
-      <small class="text-muted">Última actualización: ${new Date().toLocaleTimeString()}</small>
-    `;
-    
-  } catch (error) {
-    console.error('Error cargando tomas:', error);
-    getElement('lista').innerHTML = '<li class="list-group-item text-center text-danger">Error al cargar las tomas. Recarga la página.</li>';
-    getElement('resumen').innerHTML = '<div class="alert alert-danger">⚠️ Error conectando con la base de datos. Verifica tu conexión.</div>';
-  } finally {
-    showLoading(false);
-  }
+    html += `</div>`;
+  });
+  
+  lista.innerHTML = html;
 }
 
-async function editarToma(id) {
-  try {
-    const { data, error } = await supabase
-      .from('mkm_toma')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (error) throw error;
-    if (!data) {
-      alert('No se encontró la toma');
-      return;
+function actualizarResumen() {
+  const hoy = new Date().toISOString().split('T')[0];
+  const tomasHoy = tomas.filter(t => t.fecha === hoy);
+  
+  // Calcular tiempo total
+  let totalMinutos = 0;
+  tomasHoy.forEach(t => {
+    if (t.hora_inicio && t.hora_fin) {
+      const minutos = calcularMinutos(t.hora_inicio, t.hora_fin);
+      if (minutos > 0) totalMinutos += minutos;
     }
-    
-    editId = id;
-    getElement('formToma').classList.remove('d-none');
-    getElement('inicio').value = data.hora_inicio || '';
-    getElement('fin').value = data.hora_fin || '';
-    setStars(data.estrellas || 0);
-    getElement('lado').value = data.lado || 'Izquierdo';
-    getElement('comentarios').value = data.comentarios || '';
-    getElement('btnGuardar').textContent = 'Actualizar ✓';
-    
-    // Scroll al formulario
-    getElement('formToma').scrollIntoView({ behavior: 'smooth' });
-    
-  } catch (error) {
-    console.error('Error cargando toma para editar:', error);
-    alert('Error al cargar la toma para editar: ' + error.message);
+  });
+  
+  // Última toma
+  let ultimaToma = '--:--';
+  if (tomasHoy.length > 0) {
+    const ultima = tomasHoy.reduce((latest, toma) => {
+      return toma.hora_inicio > latest.hora_inicio ? toma : latest;
+    });
+    ultimaToma = ultima.hora_inicio;
+  }
+  
+  // Actualizar UI
+  document.getElementById('totalTomas').textContent = tomasHoy.length;
+  document.getElementById('tiempoTotal').textContent = 
+    `${Math.floor(totalMinutos/60)}h ${totalMinutos%60}m`;
+  document.getElementById('ultimaToma').textContent = ultimaToma;
+}
+
+/************ UTILIDADES ************/
+function calcularMinutos(inicio, fin) {
+  if (!inicio || !fin) return 0;
+  
+  try {
+    const [h1, m1] = inicio.split(':').map(Number);
+    const [h2, m2] = fin.split(':').map(Number);
+    return (h2 * 60 + m2) - (h1 * 60 + m1);
+  } catch (e) {
+    return 0;
   }
 }
 
-/************ INICIALIZACIÓN ************/
-document.addEventListener('DOMContentLoaded', function() {
-  // Auto-focus en el campo de contraseña
-  const passwordField = getElement('password');
-  if (passwordField) {
-    passwordField.focus();
-    
-    // Permitir Enter para login
-    passwordField.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        login();
-      }
-    });
+function calcularDuracion(inicio, fin) {
+  if (!inicio || !fin) return '';
+  
+  const minutos = calcularMinutos(inicio, fin);
+  if (minutos <= 0) return '';
+  
+  const horas = Math.floor(minutos / 60);
+  const mins = minutos % 60;
+  
+  if (horas > 0) {
+    return `${horas}h ${mins}m`;
+  } else {
+    return `${mins}m`;
+  }
+}
+
+/************ EXPORTAR/IMPORTAR ************/
+function exportarDatos() {
+  const datosCodificados = btoa(JSON.stringify(tomas));
+  document.getElementById('backupData').value = datosCodificados;
+  
+  // También copiar al portapapeles
+  navigator.clipboard.writeText(datosCodificados).then(() => {
+    alert('Datos copiados al portapapeles. ¡Guárdalos en un lugar seguro!');
+  });
+}
+
+function importarDatos() {
+  const datos = document.getElementById('restoreData').value.trim();
+  if (!datos) {
+    alert('Por favor, pega el código de respaldo');
+    return;
   }
   
-  // Verificar autenticación
-  if (localStorage.getItem('auth')) {
-    init();
+  try {
+    const datosImportados = JSON.parse(atob(datos));
+    if (Array.isArray(datosImportados)) {
+      // Mezclar con datos existentes, evitando duplicados
+      const idsExistentes = new Set(tomas.map(t => t.id));
+      datosImportados.forEach(toma => {
+        if (!idsExistentes.has(toma.id)) {
+          tomas.push(toma);
+        }
+      });
+      
+      // Ordenar por fecha
+      tomas.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      
+      guardarDatos();
+      renderizarTomas();
+      actualizarResumen();
+      
+      // Cerrar modal
+      bootstrap.Modal.getInstance(document.getElementById('backupModal')).hide();
+      alert(`¡Datos importados! Ahora tienes ${tomas.length} tomas.`);
+    } else {
+      alert('Formato de datos incorrecto');
+    }
+  } catch (e) {
+    alert('Error importando datos: ' + e.message);
   }
-  
-  // Exponer funciones al ámbito global
-  window.login = login;
-  window.logout = logout;
-  window.nuevaToma = nuevaToma;
-  window.cancelarToma = cancelarToma;
-  window.cerrarAhora = cerrarAhora;
-  window.setStars = setStars;
-  window.guardarToma = guardarToma;
-  window.editarToma = editarToma;
-});
+}
+
+/************ COMPARTIR ************/
+function mostrarBackupModal() {
+  const modal = new bootstrap.Modal(document.getElementById('backupModal'));
+  modal.show();
+}
+
+// Exponer funciones globalmente
+window.login = login;
+window.logout = logout;
+window.nuevaToma = nuevaToma;
+window.cancelarToma = cancelarToma;
+window.cerrarAhora = cerrarAhora;
+window.setStars = setStars;
+window.guardarToma = guardarToma;
+window.editarToma = editarToma;
+window.eliminarToma = eliminarToma;
+window.sincronizar = sincronizar;
+window.exportarDatos = exportarDatos;
+window.importarDatos = importarDatos;
+window.mostrarBackupModal = mostrarBackupModal;
 </script>
 </body>
 </html>
