@@ -438,7 +438,7 @@ function renderizarTomas(){
     item.innerHTML=`
       <div class="d-flex justify-content-between align-items-center">
         <div>
-          <strong>${t.hora_inicio}</strong>${t.hora_fin?` - <strong>${t.hora_fin}</strong>`:''} (${t.lado})
+          <strong>${t.fecha} ${t.hora_inicio}</strong>${t.hora_fin?` - <strong>${t.hora_fin}</strong>`:''} (${t.lado})
           <div class="stars">${'★'.repeat(t.estrellas)+'☆'.repeat(5-t.estrellas)}</div>
         </div>
         <div>
