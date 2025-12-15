@@ -29,6 +29,15 @@
     .toma-derecha{border-left:4px solid #6bd1b3}
     .toma-ambos{border-left:4px solid #9d7aff}
     .connection-badge{font-size:0.75em}
+    .stars{color:#ffc107; font-size:1.2rem}
+    .historial-item{display:flex; flex-direction:column; gap:0.5rem}
+    .historial-item-header{display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap}
+    .historial-item-content{flex:1; min-width:0}
+    .historial-item-actions{display:flex; gap:0.5rem; flex-shrink:0}
+    @media (max-width:576px){
+      .historial-item-header{flex-direction:column; gap:0.75rem}
+      .historial-item-actions{width:100%; justify-content:flex-end}
+    }
   </style>
 </head>
 <body>
@@ -39,64 +48,12 @@
     <div class="text-center mb-3">
       <h1 class="display-1">🍼</h1>
       <h3 class="mb-2">milk-o-meter</h3>
-      <p class="text-muted">Seguimiento de tomas 💕</p>
+      <p class="text-muted">Seguimiento de lactancia 💕</p>
     </div>
     <input type="password" id="password" class="form-control mb-3" placeholder="Contraseña" autocomplete="off" />
     <button class="btn btn-primary w-100" onclick="login()">
       <i class="bi bi-door-open"></i> Entrar
     </button>
-  </div>
-</div>
-
-<!-- CONFIG MODAL -->
-<div class="modal fade" id="configModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title"><i class="bi bi-gear"></i> Configuración</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="alert alert-info">
-          <small><i class="bi bi-info-circle"></i> Configura estos datos una sola vez para sincronizar entre dispositivos</small>
-        </div>
-        
-        <div class="mb-3">
-          <label class="form-label">Tu usuario de GitHub</label>
-          <input type="text" id="githubUser" class="form-control" placeholder="ej: tuusuario" />
-        </div>
-        
-        <div class="mb-3">
-          <label class="form-label">Nombre del repositorio</label>
-          <input type="text" id="repoName" class="form-control" placeholder="ej: milk-o-meter" value="milk-o-meter" />
-        </div>
-        
-        <div class="mb-3">
-          <label class="form-label">Token de GitHub</label>
-          <input type="password" id="githubToken" class="form-control" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" />
-          <small class="text-muted">
-            <a href="https://github.com/settings/tokens" target="_blank">Crear token aquí</a> (permisos: repo)
-          </small>
-        </div>
-        
-        <div class="alert alert-warning">
-          <small><i class="bi bi-exclamation-triangle"></i> <strong>Instrucciones:</strong>
-          <ol class="mb-0">
-            <li>Crea repositorio en GitHub (público o privado)</li>
-            <li>Crea token en GitHub con permisos "repo"</li>
-            <li>Introduce los datos aquí</li>
-            <li>¡Listo! Los datos se sincronizarán automáticamente</li>
-          </ol>
-          </small>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-primary" onclick="guardarConfig()">
-          <i class="bi bi-save"></i> Guardar configuración
-        </button>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -112,9 +69,6 @@
       </div>
     </div>
     <div>
-      <button class="btn btn-outline-info btn-sm me-2" onclick="mostrarConfig()">
-        <i class="bi bi-gear"></i>
-      </button>
       <button class="btn btn-outline-secondary btn-sm" onclick="logout()">
         <i class="bi bi-box-arrow-right"></i>
       </button>
@@ -147,16 +101,37 @@
     </div>
   </div>
 
-  <!-- Botón Nueva Toma -->
+  <!-- Estadísticas Detalladas -->
+  <div class="accordion mb-3" id="accordionEstadisticas">
+    <div class="accordion-item card" style="border: none;">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEstadisticas" aria-expanded="false" aria-controls="collapseEstadisticas">
+          <i class="bi bi-bar-chart me-2"></i> Estadísticas Detalladas
+        </button>
+      </h2>
+      <div id="collapseEstadisticas" class="accordion-collapse collapse" data-bs-parent="#accordionEstadisticas">
+        <div class="accordion-body">
+          <div id="estadisticasDetalladas">
+            <div class="text-center py-3">
+              <div class="spinner-border text-primary" role="status"></div>
+              <p class="mt-2 text-muted">Calculando estadísticas...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Botón Nueva toma -->
   <button class="btn btn-success w-100 mb-3 py-3" onclick="nuevaToma()">
-    <i class="bi bi-plus-circle"></i> Nueva Toma
+    <i class="bi bi-plus-circle"></i> Nueva toma
   </button>
 
   <!-- Formulario Toma -->
   <div id="formToma" class="card mb-3 d-none">
     <div class="card-body">
       <h5 class="card-title mb-3" id="formTitle">
-        <i class="bi bi-clock-history"></i> Nueva Toma
+        <i class="bi bi-clock-history"></i> Nueva toma
       </h5>
       
       <div class="mb-3">
@@ -176,7 +151,7 @@
       </div>
       
       <div class="mb-3">
-        <label class="form-label"><i class="bi bi-star"></i> Cantidad</label>
+        <label class="form-label"><i class="bi bi-star"></i> Calidad de la toma</label>
         <div id="estrellas" class="stars text-center">
           <span onclick="setStars(1)">☆</span>
           <span onclick="setStars(2)">☆</span>
@@ -190,11 +165,11 @@
       </div>
       
       <div class="mb-3">
-        <label class="form-label"><i class="bi bi-symmetry-vertical"></i> Pecho</label>
+        <label class="form-label"><i class="bi bi-symmetry-vertical"></i> Teta</label>
         <select id="lado" class="form-select">
-          <option value="Izquierdo">👈 Izquierdo</option>
-          <option value="Derecho">👉 Derecho</option>
-          <option value="Ambos">🤲 Ambos</option>
+          <option value="Izquierda">👈 Izquierda</option>
+          <option value="Derecha">👉 Derecha</option>
+          <option value="Ambas">🤲 Ambas</option>
         </select>
       </div>
       
@@ -218,7 +193,7 @@
   <div class="card">
     <div class="card-body">
       <h6 class="card-title mb-3">
-        <i class="bi bi-list-check"></i> Historial de Tomas
+        <i class="bi bi-list-check"></i> Historial de tomas
       </h6>
       <div id="lista" class="list-group list-group-flush">
         <div class="text-center py-4">
@@ -280,16 +255,22 @@ function logout() {
 }
 
 /************ INICIALIZACIÓN APP ************/
-function initApp() {
+async function initApp() {
   document.getElementById('loginView').classList.add('d-none');
   document.getElementById('appView').classList.remove('d-none');
   cargarConfig();
+  // Cargar datos locales primero para mostrar algo inmediatamente
   cargarDatos();
+  // Si hay configuración, sincronizar inmediatamente con GitHub
+  if (config && config.githubUser && config.githubToken) {
+    await sincronizarConGitHub();
+  }
   syncInterval = setInterval(sincronizarConGitHub, 30000);
 }
 
 /************ CONFIG GITHUB ************/
 function cargarConfig() {
+  // Si la contraseña es "ari", cargar configuración automática
   const configGuardada = localStorage.getItem(CONFIG_KEY);
   if (configGuardada) {
     try {
@@ -299,33 +280,25 @@ function cargarConfig() {
       config = null;
     }
   }
-  if (!config || !config.githubUser || !config.githubToken) setTimeout(mostrarConfig, 500);
-}
-
-function guardarConfig() {
-  const githubUser = document.getElementById('githubUser').value.trim();
-  const repoName = document.getElementById('repoName').value.trim() || 'milk-o-meter';
-  const githubToken = document.getElementById('githubToken').value.trim();
   
-  if (!githubUser || !githubToken) { alert('Por favor, completa todos los campos'); return; }
-  
-  config = { githubUser, repoName, githubToken, configuredAt: new Date().toISOString() };
-  localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
-  const modal = bootstrap.Modal.getInstance(document.getElementById('configModal'));
-  if (modal) modal.hide();
-  alert('✅ Configuración guardada. Ahora se sincronizará con GitHub.');
-  sincronizarConGitHub();
-}
-
-function mostrarConfig() {
-  const modal = new bootstrap.Modal(document.getElementById('configModal'));
-  if (config) {
-    document.getElementById('githubUser').value = config.githubUser || '';
-    document.getElementById('repoName').value = config.repoName || 'milk-o-meter';
-    document.getElementById('githubToken').value = config.githubToken || '';
+  // Si no hay configuración guardada y la contraseña es "ari", usar configuración por defecto
+  if ((!config || !config.githubUser || !config.githubToken) && APP_PASSWORD === 'ari') {
+    config = {
+      githubUser: 'alvarovelezgalvez',
+      repoName: 'milk-o-meter',
+      githubToken: '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',
+      configuredAt: new Date().toISOString(),
+      autoConfigured: true
+    };
+    localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  } else if (!config || !config.githubUser || !config.githubToken) {
+    // Solo mostrar modal si la contraseña NO es "ari"
+    if (APP_PASSWORD !== 'ari') {
+      setTimeout(mostrarConfig, 500);
+    }
   }
-  modal.show();
 }
+
 
 /************ GESTIÓN DE DATOS ************/
 function cargarDatos() {
@@ -333,7 +306,7 @@ function cargarDatos() {
   if (datosLocales) {
     try { tomas = JSON.parse(datosLocales); } catch(e){ tomas=[]; }
   }
-  renderizarTomas(); actualizarResumen(); actualizarInfo();
+  renderizarTomas(); actualizarResumen(); actualizarInfo(); actualizarEstadisticasDetalladas();
 }
 
 function guardarDatosLocales() {
@@ -367,13 +340,13 @@ function actualizarInfo(){
 function nuevaToma() {
   editId=null;
   document.getElementById('formToma').classList.remove('d-none');
-  document.getElementById('formTitle').innerHTML = '<i class="bi bi-clock-history"></i> Nueva Toma';
+  document.getElementById('formTitle').innerHTML = '<i class="bi bi-clock-history"></i> Nueva toma';
   const ahora=new Date();
   const hora=String(ahora.getHours()).padStart(2,'0');
   const minutos=String(ahora.getMinutes()).padStart(2,'0');
   document.getElementById('inicio').value=`${hora}:${minutos}`;
   document.getElementById('fin').value=''; document.getElementById('comentarios').value='';
-  setStars(3); document.getElementById('lado').value='Izquierdo';
+  setStars(3); document.getElementById('lado').value='Izquierda';
   document.getElementById('btnGuardar').innerHTML='<i class="bi bi-save"></i> Guardar Toma';
   document.getElementById('formToma').scrollIntoView({behavior:'smooth'});
 }
@@ -416,6 +389,7 @@ function guardarToma(){
   renderizarTomas();
   actualizarResumen();
   actualizarInfo();
+  actualizarEstadisticasDetalladas();
   cancelarToma();
 }
 
@@ -434,19 +408,31 @@ function renderizarTomas(){
 
   tomasOrdenadas.forEach(t=>{
     const item=document.createElement('div');
-    item.className='list-group-item '+(t.lado==='Izquierdo'?'toma-izquierda':t.lado==='Derecho'?'toma-derecha':'toma-ambos');
+    const ladoFormateado = formatearLado(t.lado);
+    const ladoClase = t.lado==='Izquierdo'||t.lado==='Izquierda'?'toma-izquierda':t.lado==='Derecho'||t.lado==='Derecha'?'toma-derecha':'toma-ambos';
+    item.className=`list-group-item historial-item ${ladoClase}`;
+    const fechaCompleta = formatearFechaCompleta(t.fecha);
+    const horaTexto = t.hora_fin ? `${t.hora_inicio} - ${t.hora_fin}` : t.hora_inicio;
     item.innerHTML=`
-      <div class="d-flex justify-content-between align-items-center">
-        <div>
-          <strong>${t.fecha} ${t.hora_inicio}</strong>${t.hora_fin?` - <strong>${t.hora_fin}</strong>`:''} (${t.lado})
-          <div class="stars">${'★'.repeat(t.estrellas)+'☆'.repeat(5-t.estrellas)}</div>
+      <div class="historial-item-header">
+        <div class="historial-item-content">
+          <div class="mb-1">
+            <strong class="d-block">${fechaCompleta}</strong>
+            <span class="text-muted">${horaTexto}</span>
+            <span class="badge bg-light text-dark ms-2">${ladoFormateado}</span>
+          </div>
+          <div class="stars mb-1">${'★'.repeat(t.estrellas)+'☆'.repeat(5-t.estrellas)}</div>
+          ${t.comentarios?`<div class="text-muted"><small>${t.comentarios}</small></div>`:''}
         </div>
-        <div>
-          <button class="btn btn-sm btn-outline-primary me-1" onclick="editarToma(${t.id})"><i class="bi bi-pencil"></i></button>
-          <button class="btn btn-sm btn-outline-danger" onclick="borrarToma(${t.id})"><i class="bi bi-trash"></i></button>
+        <div class="historial-item-actions">
+          <button class="btn btn-sm btn-outline-primary" onclick="editarToma(${t.id})" title="Editar">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-danger" onclick="borrarToma(${t.id})" title="Eliminar">
+            <i class="bi bi-trash"></i>
+          </button>
         </div>
       </div>
-      ${t.comentarios?`<div class="mt-1 text-muted"><small>${t.comentarios}</small></div>`:''}
     `;
     lista.appendChild(item);
   });
@@ -487,13 +473,244 @@ function editarToma(id){
 
 function borrarToma(id){
   if(!confirm('¿Eliminar esta toma?')) return;
-  tomas=tomas.filter(t=>t.id!==id); guardarDatos(); renderizarTomas(); actualizarResumen(); actualizarInfo();
+  tomas=tomas.filter(t=>t.id!==id); guardarDatos(); renderizarTomas(); actualizarResumen(); actualizarInfo(); actualizarEstadisticasDetalladas();
 }
 
 function calcularMinutos(inicio,fin){
   if(!inicio||!fin)return 0;
-  const [h1,m1]=inicio.split(':').map(Number); const [h2,m2]=fin.split(':').map(Number);
-  return (h2*60+m2)-(h1*60+m1);
+  const [h1,m1]=inicio.split(':').map(Number); 
+  const [h2,m2]=fin.split(':').map(Number);
+  const minutosInicio = h1*60+m1;
+  const minutosFin = h2*60+m2;
+  let diferencia = minutosFin - minutosInicio;
+  // Si la diferencia es negativa, significa que cruzó la medianoche
+  // Sumamos 24 horas (1440 minutos) para obtener el tiempo correcto
+  if(diferencia < 0) diferencia += 1440;
+  return diferencia;
+}
+
+/************ UTILIDADES ************/
+function formatearFechaCompleta(fechaStr){
+  const fecha = new Date(fechaStr + 'T00:00:00');
+  return fecha.toLocaleDateString('es-ES', { 
+    weekday: 'long', 
+    day: 'numeric', 
+    month: 'long' 
+  });
+}
+
+function formatearLado(lado){
+  const map = {
+    'Izquierdo': 'Izquierda',
+    'Derecho': 'Derecha',
+    'Ambos': 'Ambas'
+  };
+  return map[lado] || lado;
+}
+
+/************ ESTADÍSTICAS DETALLADAS ************/
+function actualizarEstadisticasDetalladas(){
+  if(tomas.length === 0){
+    document.getElementById('estadisticasDetalladas').innerHTML = '<div class="text-center py-3 text-muted">No hay datos para mostrar estadísticas</div>';
+    return;
+  }
+
+  // Agrupar tomas por fecha
+  const tomasPorFecha = {};
+  tomas.forEach(t => {
+    if(!tomasPorFecha[t.fecha]) tomasPorFecha[t.fecha] = [];
+    tomasPorFecha[t.fecha].push(t);
+  });
+
+  // Calcular estadísticas generales
+  const fechas = Object.keys(tomasPorFecha).sort().reverse();
+  const totalDias = fechas.length;
+  const totalTomas = tomas.length;
+  const totalMinutos = tomas.reduce((sum, t) => {
+    if(t.hora_inicio && t.hora_fin) return sum + calcularMinutos(t.hora_inicio, t.hora_fin);
+    return sum;
+  }, 0);
+  const totalHoras = Math.floor(Math.abs(totalMinutos) / 60);
+  const minutosRestantes = Math.abs(totalMinutos) % 60;
+  
+  // Promedio de tomas por día
+  const promedioTomasPorDia = (totalTomas / totalDias).toFixed(1);
+  
+  // Promedio de tiempo por toma
+  const tomasConTiempo = tomas.filter(t => t.hora_inicio && t.hora_fin);
+  const promedioMinutosPorToma = tomasConTiempo.length > 0 
+    ? Math.round(tomasConTiempo.reduce((sum, t) => sum + calcularMinutos(t.hora_inicio, t.hora_fin), 0) / tomasConTiempo.length)
+    : 0;
+  
+  // Distribución por lado
+  const ladoIzquierdo = tomas.filter(t => t.lado === 'Izquierdo' || t.lado === 'Izquierda').length;
+  const ladoDerecho = tomas.filter(t => t.lado === 'Derecho' || t.lado === 'Derecha').length;
+  const ladoAmbos = tomas.filter(t => t.lado === 'Ambos' || t.lado === 'Ambas').length;
+  
+  // Promedio de estrellas
+  const promedioEstrellas = (tomas.reduce((sum, t) => sum + t.estrellas, 0) / totalTomas).toFixed(1);
+  
+  // Día con más tomas
+  let maxTomas = 0;
+  let fechaMaxTomas = '';
+  fechas.forEach(fecha => {
+    if(tomasPorFecha[fecha].length > maxTomas){
+      maxTomas = tomasPorFecha[fecha].length;
+      fechaMaxTomas = fecha;
+    }
+  });
+  
+  // Día con más tiempo
+  let maxMinutos = 0;
+  let fechaMaxTiempo = '';
+  fechas.forEach(fecha => {
+    const minutosDia = tomasPorFecha[fecha].reduce((sum, t) => {
+      if(t.hora_inicio && t.hora_fin) return sum + calcularMinutos(t.hora_inicio, t.hora_fin);
+      return sum;
+    }, 0);
+    const minutosDiaAbs = Math.abs(minutosDia);
+    if(minutosDiaAbs > maxMinutos){
+      maxMinutos = minutosDiaAbs;
+      fechaMaxTiempo = fecha;
+    }
+  });
+  
+  // Formatear fecha para estadísticas (formato corto)
+  function formatearFecha(fechaStr){
+    const fecha = new Date(fechaStr + 'T00:00:00');
+    return fecha.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+  }
+
+  const html = `
+    <div class="row g-3">
+      <!-- Estadísticas Generales -->
+      <div class="col-12">
+        <h6 class="mb-3"><i class="bi bi-info-circle"></i> Resumen General</h6>
+        <div class="row text-center g-2">
+          <div class="col-6 col-md-3">
+            <div class="p-2 bg-light rounded">
+              <div class="h5 mb-0">${totalDias}</div>
+              <small class="text-muted">Días</small>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-2 bg-light rounded">
+              <div class="h5 mb-0">${totalTomas}</div>
+              <small class="text-muted">Total Tomas</small>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-2 bg-light rounded">
+              <div class="h5 mb-0">${totalHoras}h ${minutosRestantes}m</div>
+              <small class="text-muted">Tiempo Total</small>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-2 bg-light rounded">
+              <div class="h5 mb-0">${promedioTomasPorDia}</div>
+              <small class="text-muted">Promedio/día</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Promedios -->
+      <div class="col-12 col-md-6">
+        <h6 class="mb-3"><i class="bi bi-calculator"></i> Promedios</h6>
+        <div class="list-group list-group-flush">
+          <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+            <span>Tiempo por toma</span>
+            <strong>${promedioMinutosPorToma} min</strong>
+          </div>
+          <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+            <span>Calidad promedio</span>
+            <strong>${promedioEstrellas} ⭐</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Distribución por Lado -->
+      <div class="col-12 col-md-6">
+        <h6 class="mb-3"><i class="bi bi-symmetry-vertical"></i> Distribución por Pecho</h6>
+        <div class="list-group list-group-flush">
+          <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+            <span>👈 Izquierda</span>
+            <strong>${ladoIzquierdo} (${((ladoIzquierdo/totalTomas)*100).toFixed(1)}%)</strong>
+          </div>
+          <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+            <span>👉 Derecha</span>
+            <strong>${ladoDerecho} (${((ladoDerecho/totalTomas)*100).toFixed(1)}%)</strong>
+          </div>
+          <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+            <span>🤲 Ambas</span>
+            <strong>${ladoAmbos} (${((ladoAmbos/totalTomas)*100).toFixed(1)}%)</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Récords -->
+      <div class="col-12">
+        <h6 class="mb-3"><i class="bi bi-trophy"></i> Récords</h6>
+        <div class="row g-2">
+          <div class="col-12 col-md-6">
+            <div class="p-3 bg-light rounded">
+              <small class="text-muted d-block mb-1">Día con más tomas</small>
+              <strong>${fechaMaxTomas ? formatearFecha(fechaMaxTomas) : 'N/A'}</strong>
+              <div class="text-muted">${maxTomas} tomas</div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="p-3 bg-light rounded">
+              <small class="text-muted d-block mb-1">Día con más tiempo</small>
+              <strong>${fechaMaxTiempo ? formatearFecha(fechaMaxTiempo) : 'N/A'}</strong>
+              <div class="text-muted">${Math.floor(maxMinutos/60)}h ${maxMinutos%60}m</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Últimos 7 días -->
+      <div class="col-12">
+        <h6 class="mb-3"><i class="bi bi-calendar-week"></i> Últimos 7 Días</h6>
+        <div class="table-responsive">
+          <table class="table table-sm table-hover">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th class="text-center">Tomas</th>
+                <th class="text-center">Tiempo</th>
+                <th class="text-center">Promedio</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${fechas.slice(0, 7).map(fecha => {
+                const tomasDia = tomasPorFecha[fecha];
+                const minutosDia = tomasDia.reduce((sum, t) => {
+                  if(t.hora_inicio && t.hora_fin) return sum + calcularMinutos(t.hora_inicio, t.hora_fin);
+                  return sum;
+                }, 0);
+                const promedioDia = tomasDia.length > 0 
+                  ? Math.round(tomasDia.reduce((sum, t) => sum + t.estrellas, 0) / tomasDia.length * 10) / 10
+                  : 0;
+                const horasDia = Math.floor(Math.abs(minutosDia) / 60);
+                const minutosRestantesDia = Math.abs(minutosDia) % 60;
+                return `
+                  <tr>
+                    <td>${formatearFecha(fecha)}</td>
+                    <td class="text-center">${tomasDia.length}</td>
+                    <td class="text-center">${horasDia}h ${minutosRestantesDia}m</td>
+                    <td class="text-center">${promedioDia} ⭐</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.getElementById('estadisticasDetalladas').innerHTML = html;
 }
 
 /************ SINCRONIZACIÓN GITHUB ************/
@@ -529,7 +746,7 @@ async function sincronizarConGitHub(){
     if(res.ok){
       const data=await res.json();
       const remoto=b64DecodeUnicode(data.content);
-      tomas=JSON.parse(remoto); guardarDatosLocales(); renderizarTomas(); actualizarResumen(); actualizarInfo();
+      tomas=JSON.parse(remoto); guardarDatosLocales(); renderizarTomas(); actualizarResumen(); actualizarInfo(); actualizarEstadisticasDetalladas();
       actualizarSyncStatus('success','Sincronizado con GitHub');
     }
   }catch(e){ actualizarSyncStatus('danger','Error sincronizando'); }
