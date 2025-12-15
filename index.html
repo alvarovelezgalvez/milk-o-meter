@@ -48,7 +48,7 @@
     <div class="text-center mb-3">
       <h1 class="display-1">🍼</h1>
       <h3 class="mb-2">milk-o-meter</h3>
-      <p class="text-muted">Seguimiento de lactancia 💕 1.1</p>
+      <p class="text-muted">Seguimiento de lactancia 💕 1.2</p>
     </div>
     <input type="password" id="password" class="form-control mb-3" placeholder="Clave de acceso" autocomplete="off" />
     <button class="btn btn-primary w-100" onclick="login()">
@@ -451,7 +451,9 @@ function setStars(n){
 }
 
 function guardarToma(){
-  const fecha=new Date().toISOString().split('T')[0];
+  const hoy=new Date().toISOString().split('T')[0];
+  const tomaOriginal = editId ? tomas.find(t=>t.id===editId) : null;
+  const fecha = (tomaOriginal && tomaOriginal.fecha) ? tomaOriginal.fecha : hoy;
   const inicio=document.getElementById('inicio').value;
   const fin=document.getElementById('fin').value || null;
   const lado=document.getElementById('lado').value;
@@ -466,7 +468,7 @@ function guardarToma(){
     estrellas:estrellasValor,
     lado,
     comentarios:comentarios || '',
-    created_at:editId ? tomas.find(t=>t.id===editId).created_at : ahora.toISOString(),
+    created_at:(tomaOriginal && tomaOriginal.created_at) ? tomaOriginal.created_at : ahora.toISOString(),
     updated_at: ahora.toISOString()
   };
 
