@@ -50,7 +50,7 @@
       <h3 class="mb-2">milk-o-meter</h3>
       <p class="text-muted">Seguimiento de lactancia 💕</p>
     </div>
-    <input type="password" id="password" class="form-control mb-3" placeholder="Contraseña" autocomplete="off" />
+    <input type="password" id="password" class="form-control mb-3" placeholder="Clave de acceso" autocomplete="off" />
     <button class="btn btn-primary w-100" onclick="login()">
       <i class="bi bi-door-open"></i> Entrar
     </button>
@@ -208,7 +208,6 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 /************ CONFIGURACIÓN ************/
-const APP_PASSWORD = 'ari';
 const CONFIG_KEY = 'milkometer_config_v1';
 const DATA_KEY = 'milkometer_local_data_v1';
 
@@ -228,49 +227,156 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  if (localStorage.getItem('milkometer_auth') === 'true') {
-    initApp();
+  // Verificar si hay sesión guardada y validar el token
+  const configGuardada = localStorage.getItem(CONFIG_KEY);
+  if (localStorage.getItem('milkometer_auth') === 'true' && configGuardada) {
+    try {
+      config = JSON.parse(configGuardada);
+      if (config && config.githubToken) {
+        // Validar el token antes de iniciar la app
+        validarGitHubToken(config.githubToken).then(tokenValido => {
+          if (tokenValido) {
+            initApp();
+          } else {
+            // Token inválido, limpiar y mostrar login
+            localStorage.removeItem('milkometer_auth');
+            localStorage.removeItem(CONFIG_KEY);
+            alert('La GitHub API Key ha expirado o es inválida. Por favor, introdúcela de nuevo.');
+          }
+        });
+      }
+    } catch (e) {
+      // Si hay error, mostrar login
+      localStorage.removeItem('milkometer_auth');
+      localStorage.removeItem(CONFIG_KEY);
+    }
   }
 });
 
 /************ AUTENTICACIÓN ************/
-function login() {
-  const password = document.getElementById('password').value;
-  if (password === APP_PASSWORD) {
-    localStorage.setItem('milkometer_auth', 'true');
-    initApp();
-  } else {
-    alert('Contraseña incorrecta');
+async function validarGitHubToken(token) {
+  try {
+    // Validar el token usando el endpoint de usuario autenticado
+    // Probar primero con Bearer (formato moderno)
+    let res = await fetch('https://api.github.com/user', {
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+    
+    // Si Bearer falla con 401/403, probar con token (formato antiguo, compatible)
+    if (res.status === 401 || res.status === 403) {
+      res = await fetch('https://api.github.com/user', {
+        headers: { 
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      });
+    }
+    
+    // Si la respuesta es 200, el token es válido
+    if (res.status === 200) {
+      return true;
+    }
+    // Si es 401 o 403 después de probar ambos formatos, el token es inválido
+    console.error('Token inválido, status:', res.status);
+    return false;
+  } catch (e) {
+    console.error('Error validando token:', e);
+    // En caso de error de red, permitir continuar (la sincronización validará)
+    return true;
+  }
+}
+
+async function login() {
+  const githubToken = document.getElementById('password').value.trim();
+  if (!githubToken) {
+    alert('Por favor, introduce tu GitHub API Key');
+    document.getElementById('password').focus();
+    return;
+  }
+  
+  // Mostrar mensaje de validación
+  const btn = document.querySelector('#loginView button');
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Validando...';
+  
+  // Validar el token antes de permitir acceso
+  const tokenValido = await validarGitHubToken(githubToken);
+  
+  if (!tokenValido) {
+    alert('GitHub API Key inválida. Por favor, verifica tu token.');
     document.getElementById('password').focus();
     document.getElementById('password').select();
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+    return;
   }
+  
+  // Guardar el token en la configuración solo si es válido
+  config = {
+    githubUser: 'alvarovelezgalvez',
+    repoName: 'milk-o-meter',
+    githubToken: githubToken,
+    configuredAt: new Date().toISOString()
+  };
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  localStorage.setItem('milkometer_auth', 'true');
+  initApp();
 }
 
 function logout() {
   if (confirm('¿Seguro que quieres salir?')) {
     localStorage.removeItem('milkometer_auth');
+    localStorage.removeItem(CONFIG_KEY);
     if (syncInterval) clearInterval(syncInterval);
     location.reload();
   }
 }
 
 /************ INICIALIZACIÓN APP ************/
+function limpiarSesion() {
+  localStorage.removeItem('milkometer_auth');
+  localStorage.removeItem(CONFIG_KEY);
+  if (syncInterval) clearInterval(syncInterval);
+  document.getElementById('appView').classList.add('d-none');
+  document.getElementById('loginView').classList.remove('d-none');
+  document.getElementById('password').value = '';
+  document.getElementById('password').focus();
+}
+
 async function initApp() {
   document.getElementById('loginView').classList.add('d-none');
   document.getElementById('appView').classList.remove('d-none');
   cargarConfig();
-  // Cargar datos locales primero para mostrar algo inmediatamente
-  cargarDatos();
-  // Si hay configuración, sincronizar inmediatamente con GitHub
-  if (config && config.githubUser && config.githubToken) {
-    await sincronizarConGitHub();
+  
+  // Validar que tenemos configuración válida
+  if (!config || !config.githubUser || !config.githubToken) {
+    alert('Error: No hay configuración válida. Por favor, inicia sesión de nuevo.');
+    limpiarSesion();
+    return;
   }
+  
+  // Sincronizar primero con GitHub antes de mostrar datos locales
+  actualizarSyncStatus('warning', 'Sincronizando...');
+  try {
+    await sincronizarConGitHub();
+  } catch (e) {
+    // Si falla la sincronización, no permitir acceso
+    alert('Error al sincronizar con GitHub. Verifica tu API Key.');
+    limpiarSesion();
+    return;
+  }
+  
+  // Solo después de sincronizar correctamente, cargar y mostrar datos
+  cargarDatos();
   syncInterval = setInterval(sincronizarConGitHub, 30000);
 }
 
 /************ CONFIG GITHUB ************/
 function cargarConfig() {
-  // Si la contraseña es "ari", cargar configuración automática
   const configGuardada = localStorage.getItem(CONFIG_KEY);
   if (configGuardada) {
     try {
@@ -278,23 +384,6 @@ function cargarConfig() {
     } catch (e) {
       console.error('Error cargando configuración:', e);
       config = null;
-    }
-  }
-  
-  // Si no hay configuración guardada y la contraseña es "ari", usar configuración por defecto
-  if ((!config || !config.githubUser || !config.githubToken) && APP_PASSWORD === 'ari') {
-    config = {
-      githubUser: 'alvarovelezgalvez',
-      repoName: 'milk-o-meter',
-      githubToken: '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',
-      configuredAt: new Date().toISOString(),
-      autoConfigured: true
-    };
-    localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
-  } else if (!config || !config.githubUser || !config.githubToken) {
-    // Solo mostrar modal si la contraseña NO es "ari"
-    if (APP_PASSWORD !== 'ari') {
-      setTimeout(mostrarConfig, 500);
     }
   }
 }
@@ -723,33 +812,76 @@ async function guardarDatosEnGitHub(){
 
   let sha=null;
   try{
-    const r=await fetch(url,{headers:{Authorization:`token ${config.githubToken}`}});
+    let r=await fetch(url,{headers:{Authorization:`Bearer ${config.githubToken}`,'Accept':'application/vnd.github.v3+json'}});
+    // Si Bearer falla, probar con token
+    if(r.status === 401 || r.status === 403) {
+      r=await fetch(url,{headers:{Authorization:`token ${config.githubToken}`,'Accept':'application/vnd.github.v3+json'}});
+    }
     if(r.ok){ const data=await r.json(); sha=data.sha; }
   }catch(e){ /* si no existe, se crea */ }
 
   const body={message:'Actualizar datos milk-o-meter', content:contenido};
   if(sha) body.sha=sha;
 
-  const res=await fetch(url,{
+  // Probar primero con Bearer
+  let res=await fetch(url,{
     method:'PUT',
-    headers:{Authorization:`token ${config.githubToken}`,'Content-Type':'application/json'},
+    headers:{Authorization:`Bearer ${config.githubToken}`,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
     body:JSON.stringify(body)
   });
+  
+  // Si Bearer falla, probar con token
+  if(res.status === 401 || res.status === 403) {
+    res=await fetch(url,{
+      method:'PUT',
+      headers:{Authorization:`token ${config.githubToken}`,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
+      body:JSON.stringify(body)
+    });
+  }
+  
   if(!res.ok) throw new Error('Error subiendo a GitHub');
 }
 
 async function sincronizarConGitHub(){
-  if(!config || !config.githubUser || !config.githubToken) return;
+  if(!config || !config.githubUser || !config.githubToken) {
+    throw new Error('No hay configuración válida');
+  }
   try{
     const url=`https://api.github.com/repos/${config.githubUser}/${config.repoName}/contents/milkometer.json`;
-    const res=await fetch(url,{headers:{Authorization:`token ${config.githubToken}`}});
+    // Probar primero con Bearer
+    let res=await fetch(url,{headers:{Authorization:`Bearer ${config.githubToken}`,'Accept':'application/vnd.github.v3+json'}});
+    
+    // Si Bearer falla con 401/403, probar con token (formato antiguo)
+    if(res.status === 401 || res.status === 403) {
+      res=await fetch(url,{headers:{Authorization:`token ${config.githubToken}`,'Accept':'application/vnd.github.v3+json'}});
+    }
+    
+    // Si el token es inválido después de probar ambos formatos, lanzar error
+    if(res.status === 401 || res.status === 403) {
+      throw new Error('GitHub API Key inválida');
+    }
+    
     if(res.ok){
       const data=await res.json();
       const remoto=b64DecodeUnicode(data.content);
       tomas=JSON.parse(remoto); guardarDatosLocales(); renderizarTomas(); actualizarResumen(); actualizarInfo(); actualizarEstadisticasDetalladas();
       actualizarSyncStatus('success','Sincronizado con GitHub');
+    } else if(res.status === 404) {
+      // El archivo no existe aún, inicializar con array vacío
+      tomas = [];
+      guardarDatosLocales();
+      renderizarTomas();
+      actualizarResumen();
+      actualizarInfo();
+      actualizarEstadisticasDetalladas();
+      actualizarSyncStatus('success','Listo (sin datos previos)');
+    } else {
+      throw new Error(`Error HTTP: ${res.status}`);
     }
-  }catch(e){ actualizarSyncStatus('danger','Error sincronizando'); }
+  }catch(e){
+    actualizarSyncStatus('danger','Error sincronizando');
+    throw e; // Re-lanzar el error para que initApp lo capture
+  }
 }
 </script>
 </body>
