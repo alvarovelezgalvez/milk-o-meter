@@ -1,5 +1,16 @@
 [
   {
+    "id": 1765908651618,
+    "fecha": "2025-12-16",
+    "hora_inicio": "19:07",
+    "hora_fin": null,
+    "estrellas": 3,
+    "lado": "Derecha",
+    "comentarios": "",
+    "created_at": "2025-12-16T18:10:51.618Z",
+    "updated_at": "2025-12-16T18:10:51.618Z"
+  },
+  {
     "id": 1765895980733,
     "fecha": "2025-12-16",
     "hora_inicio": "15:29",
