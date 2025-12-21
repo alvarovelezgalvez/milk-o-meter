@@ -1,5 +1,27 @@
 [
   {
+    "id": 1766285309123,
+    "fecha": "2025-12-21",
+    "hora_inicio": "03:35",
+    "hora_fin": null,
+    "estrellas": 3,
+    "lado": "Derecha",
+    "comentarios": "",
+    "created_at": "2025-12-21T02:48:29.123Z",
+    "updated_at": "2025-12-21T02:48:29.123Z"
+  },
+  {
+    "id": 1766285293137,
+    "fecha": "2025-12-21",
+    "hora_inicio": "22:47",
+    "hora_fin": "23:43",
+    "estrellas": 3,
+    "lado": "Izquierda",
+    "comentarios": "",
+    "created_at": "2025-12-21T02:48:13.137Z",
+    "updated_at": "2025-12-21T02:48:13.137Z"
+  },
+  {
     "id": 1766254695961,
     "fecha": "2025-12-20",
     "hora_inicio": "19:10",
